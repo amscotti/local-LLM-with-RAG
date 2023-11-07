@@ -1,10 +1,12 @@
 # Local LLM with RAG
 
-<img src="images/wizard_experimenting.jpg" width="500">
+<p align="center">
+    <img src="images/wizard_experimenting.jpg" alt="A wizard experimenting - Leonardo AI" width="600">
+</p>
 
 This project is an experimental sandbox for testing out ideas related to running local Large Language Models (LLMs) with [Ollama](https://ollama.ai/) to perform Retrieval-Augmented Generation (RAG) for answering questions based on sample PDFs. In this project, we are also experimenting with [jina-embeddings-v2-base-en](https://huggingface.co/jinaai/jina-embeddings-v2-base-en) to create embeddings for [Chroma](https://docs.trychroma.com/). Please note that the embeddings are reloaded each time the application runs, which is not efficient and is only done here for testing purposes.
 
-[![asciicast](https://asciinema.org/a/8lMxaCbQQYYva7yYQvmnkUzLY.svg)](https://asciinema.org/a/8lMxaCbQQYYva7yYQvmnkUzLY)
+[![asciicast](https://asciinema.org/a/0kY8Vbbxvgi8M4y4Qmn4OhROh.svg)](https://asciinema.org/a/0kY8Vbbxvgi8M4y4Qmn4OhROh)
 
 ## Requirements
 
