@@ -7,7 +7,7 @@ from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
-llm = Ollama(model="nous-hermes:13b-q4_0", callbacks=[StreamingStdOutCallbackHandler()])
+llm = Ollama(model="mistral", callbacks=[StreamingStdOutCallbackHandler()])
 
 # Define the question to be answered
 question = "What is the memory stream, and how does it help the agents?"
@@ -19,7 +19,7 @@ raw_documents = DirectoryLoader('PDFs',
                                 show_progress=True, 
                                 use_multithreading=True).load()
 
-text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 documents = text_splitter.split_documents(raw_documents)
 
 # Load the embeddings into Chroma

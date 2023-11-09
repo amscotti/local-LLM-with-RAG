@@ -10,7 +10,7 @@ This project is an experimental sandbox for testing out ideas related to running
 
 ## Requirements
 
-- [Ollama](https://ollama.ai/) installed with the [Nous Hermes](https://huggingface.co/NousResearch/Nous-Hermes-13b) `nous-hermes:13b-q4_0` pulled down, by running `ollama run nous-hermes:13b-q4_0`
+- [Ollama](https://ollama.ai/) installed with the [Mistral 7B](https://huggingface.co/mistralai/Mistral-7B-v0.1) `mistral` pulled down, by running `ollama pull mistral`
 
 ## Setup
 
