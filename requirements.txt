@@ -1,6 +1,7 @@
-chromadb==0.4.15
-torch==2.1.0
-transformers==4.35.0
-accelerate==0.24.1
-langchain==0.0.330
-pypdf==3.17.0
+chromadb==0.4.23
+torch==2.2.1
+transformers==4.38.1
+accelerate==0.27.2
+langchain==0.1.8
+langchain-community==0.0.21
+pypdf==4.0.2

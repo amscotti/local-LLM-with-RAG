@@ -4,13 +4,13 @@
     <img src="images/wizard_experimenting.jpg" alt="A wizard experimenting - Leonardo AI" width="600">
 </p>
 
-This project is an experimental sandbox for testing out ideas related to running local Large Language Models (LLMs) with [Ollama](https://ollama.ai/) to perform Retrieval-Augmented Generation (RAG) for answering questions based on sample PDFs. In this project, we are also experimenting with [jina-embeddings-v2-base-en](https://huggingface.co/jinaai/jina-embeddings-v2-base-en) to create embeddings for [Chroma](https://docs.trychroma.com/). Please note that the embeddings are reloaded each time the application runs, which is not efficient and is only done here for testing purposes.
+This project is an experimental sandbox for testing out ideas related to running local Large Language Models (LLMs) with [Ollama](https://ollama.ai/) to perform Retrieval-Augmented Generation (RAG) for answering questions based on sample PDFs. In this project, we are also experimenting with [jina-embeddings-v2-small-en](https://huggingface.co/jinaai/jina-embeddings-v2-small-en) to create embeddings for [Chroma](https://docs.trychroma.com/). Please note that the embeddings are reloaded each time the application runs, which is not efficient and is only done here for testing purposes.
 
 [![asciicast](https://asciinema.org/a/0kY8Vbbxvgi8M4y4Qmn4OhROh.svg)](https://asciinema.org/a/0kY8Vbbxvgi8M4y4Qmn4OhROh)
 
 ## Requirements
 
-- [Ollama](https://ollama.ai/) installed with the [Mistral 7B](https://huggingface.co/mistralai/Mistral-7B-v0.1) `mistral` pulled down, by running `ollama pull mistral`
+- [Ollama](https://ollama.ai/) installed with the [Gemma](https://ollama.com/library/gemma), `gemma` pulled down by running `ollama pull gemma`
 
 ## Setup
 
