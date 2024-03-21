@@ -1,35 +1,17 @@
-from langchain_community.document_loaders import DirectoryLoader, PyPDFLoader
 from langchain_community.llms import Ollama
 from langchain_community.embeddings import OllamaEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-from langchain.chains import RetrievalQA
-from langchain.prompts import PromptTemplate
-from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+
 from models import check_if_model_is_available
 from document_loader import load_documents
 import argparse
 import sys
 
-
-TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-
-
-PROMPT_TEMPLATE = """
-### Instruction:
-You're helpful assistant, who answers questions based upon provided research in a distinct and clear way.
-
-## Research:
-{context}
-
-## Question:
-{question}
-"""
+from llm import getChatChain
 
 
-PROMPT = PromptTemplate(
-    template=PROMPT_TEMPLATE, input_variables=["context", "question"]
-)
+TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
 
 
 def load_documents_into_database(model_name: str, documents_path: str) -> Chroma:
@@ -69,16 +51,8 @@ def main(llm_model_name: str, embedding_model_name: str, documents_path: str) ->
         print(e)
         sys.exit()
 
-    llm = Ollama(
-        model=llm_model_name,
-        callbacks=[StreamingStdOutCallbackHandler()],
-    )
-
-    qa_chain = RetrievalQA.from_chain_type(
-        llm,
-        retriever=db.as_retriever(search_kwargs={"k": 8}),
-        chain_type_kwargs={"prompt": PROMPT},
-    )
+    llm = Ollama(model=llm_model_name)
+    chat = getChatChain(llm, db)
 
     while True:
         try:
@@ -88,8 +62,7 @@ def main(llm_model_name: str, embedding_model_name: str, documents_path: str) ->
             if user_input.lower() == "exit":
                 break
 
-            docs = db.similarity_search(user_input)
-            qa_chain.invoke({"query": user_input})
+            chat(user_input)
         except KeyboardInterrupt:
             break
 
