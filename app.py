@@ -4,35 +4,11 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 
 from models import check_if_model_is_available
-from document_loader import load_documents
+from document_loader import load_documents_into_database
 import argparse
 import sys
 
 from llm import getChatChain
-
-
-TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
-
-
-def load_documents_into_database(model_name: str, documents_path: str) -> Chroma:
-    """
-    Loads documents from the specified directory into the Chroma database
-    after splitting the text into chunks.
-
-    Returns:
-        Chroma: The Chroma database with loaded documents.
-    """
-
-    print("Loading documents")
-    raw_documents = load_documents(documents_path)
-    documents = TEXT_SPLITTER.split_documents(raw_documents)
-
-    print("Creating embeddings and loading documents into Chroma")
-    db = Chroma.from_documents(
-        documents,
-        OllamaEmbeddings(model=model_name),
-    )
-    return db
 
 
 def main(llm_model_name: str, embedding_model_name: str, documents_path: str) -> None:
