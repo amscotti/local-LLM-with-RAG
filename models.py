@@ -32,6 +32,16 @@ def __is_model_available_locally(model_name: str) -> bool:
         return False
 
 
+def get_list_of_models() -> list[str]:
+    """
+    Retrieves a list of available models from the Ollama repository.
+
+    Returns:
+        list[str]: A list of model names available in the Ollama repository.
+    """
+    return [model["name"] for model in ollama.list()["models"]]
+
+
 def check_if_model_is_available(model_name: str) -> None:
     """
     Ensures that the specified model is available locally.
