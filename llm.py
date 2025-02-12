@@ -44,9 +44,7 @@ def _combine_documents(
     return document_separator.join(doc_strings)
 
 
-memory = ConversationBufferMemory(
-    return_messages=True, output_key="answer", input_key="question"
-)
+memory = ConversationBufferMemory(return_messages=True, output_key="answer", input_key="question")
 
 
 def getStreamingChain(question: str, memory, llm, db):
@@ -66,6 +64,7 @@ def getStreamingChain(question: str, memory, llm, db):
         }
         | CONDENSE_QUESTION_PROMPT
         | llm
+        | (lambda x: x.content if hasattr(x, "content") else x)
     }
 
     retrieved_documents = {
@@ -100,6 +99,7 @@ def getChatChain(llm, db):
         }
         | CONDENSE_QUESTION_PROMPT
         | llm
+        | (lambda x: x.content if hasattr(x, "content") else x)
     }
 
     # Now we retrieve the documents
@@ -127,6 +127,6 @@ def getChatChain(llm, db):
     def chat(question: str):
         inputs = {"question": question}
         result = final_chain.invoke(inputs)
-        memory.save_context(inputs, {"answer": result["answer"]})
+        memory.save_context(inputs, {"answer": result["answer"].content if hasattr(result["answer"], "content") else result["answer"]})
 
     return chat
