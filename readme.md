@@ -16,30 +16,26 @@ There is also a web UI created using [Streamlit](https://streamlit.io/) to provi
 
 ## Requirements
 
-- [Ollama](https://ollama.ai/) verson 0.1.26 or higher.
+- [Ollama](https://ollama.ai/) verson 0.5.7 or higher.
 
 ## Setup
 
 1. Clone this repository to your local machine.
-2. Create a Python virtual environment by running `python3 -m venv .venv`.
-3. Activate the virtual environment by running `source .venv/bin/activate` on Unix or MacOS, or `.\.venv\Scripts\activate` on Windows.
-4. Install the required Python packages by running `pip install -r requirements.txt`.
+2. Install UV using instructions from the Astral site, [Installation](https://docs.astral.sh/uv/#installation)
+3. Create a virtual environment and install the required Python packages by running `uv sync`
 
 ## Running the Project
 
 **Note:** The first time you run the project, it will download the necessary models from Ollama for the LLM and embeddings. This is a one-time setup process and may take some time depending on your internet connection.
 
-1. Ensure your virtual environment is activated.
-2. Run the main script with `python app.py -m <model_name> -p <path_to_documents>` to specify a model and the path to documents. If no model is specified, it defaults to [mistral](https://ollama.com/library/mistral). If no path is specified, it defaults to `Research` located in the repository for example purposes.
-3. Optionally, you can specify the embedding model to use with `-e <embedding_model_name>`. If not specified, it defaults to [nomic-embed-text](https://ollama.com/library/nomic-embed-text).
+1. Run the main script with `uv app.py -m <model_name> -p <path_to_documents>` to specify a model and the path to documents. If no model is specified, it defaults to [mistral](https://ollama.com/library/mistral). If no path is specified, it defaults to `Research` located in the repository for example purposes.
+2. Optionally, you can specify the embedding model to use with `-e <embedding_model_name>`. If not specified, it defaults to [nomic-embed-text](https://ollama.com/library/nomic-embed-text).
 
 This will load the PDFs and Markdown files, generate embeddings, query the collection, and answer the question defined in `app.py`.
 
 ## Running the Streamlit UI
 
-1. Ensure your virtual environment is activated.
-2. Navigate to the directory containing the `ui.py` script.
-3. Run the Streamlit application by executing `streamlit run ui.py` in your terminal.
+Run the Streamlit application by executing `uv streamlit run ui.py` in your terminal.
 
 This will start a local web server and open a new tab in your default web browser where you can interact with the application. The Streamlit UI allows you to select models, select a folder, providing an easier and more intuitive way to interact with the RAG chatbot system compared to the command-line interface. The application will handle the loading of documents, generating embeddings, querying the collection, and displaying the results interactively.
 
@@ -50,3 +46,4 @@ This will start a local web server and open a new tab in your default web browse
 - [Chroma](https://docs.trychroma.com/): A vector database for storing and retrieving embeddings.
 - [PyPDF](https://pypi.org/project/PyPDF2/): A Python library for reading and manipulating PDF files.
 - [Streamlit](https://streamlit.io/): A web framework for creating interactive applications for machine learning and data science projects.
+- [UV](https://astral.sh/uv): A fast and efficient Python package installer and resolver.

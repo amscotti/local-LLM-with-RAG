@@ -1,7 +1,4 @@
-from langchain_community.llms import Ollama
-from langchain_community.embeddings import OllamaEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import Chroma
+from langchain_ollama import ChatOllama
 
 from models import check_if_model_is_available
 from document_loader import load_documents_into_database
@@ -27,18 +24,19 @@ def main(llm_model_name: str, embedding_model_name: str, documents_path: str) ->
         print(e)
         sys.exit()
 
-    llm = Ollama(model=llm_model_name)
+    llm = ChatOllama(model=llm_model_name)
     chat = getChatChain(llm, db)
 
     while True:
         try:
             user_input = input(
                 "\n\nPlease enter your question (or type 'exit' to end): "
-            )
+            ).strip()
             if user_input.lower() == "exit":
                 break
-
-            chat(user_input)
+            else:
+                chat(user_input)
+        
         except KeyboardInterrupt:
             break
 

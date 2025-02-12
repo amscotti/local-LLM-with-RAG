@@ -1,0 +1,17 @@
+[project]
+name = "local-llm-with-rag"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "chromadb==0.6.3",
+    "langchain==0.3.18",
+    "langchain-community==0.3.17",
+    "langchain-ollama>=0.2.3",
+    "ollama==0.4.7",
+    "pypdf==5.3.0",
+    "streamlit==1.42.0",
+    "tqdm==4.67.1",
+    "watchdog==6.0.0",
+]
