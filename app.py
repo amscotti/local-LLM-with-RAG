@@ -28,6 +28,7 @@ async def query(request: QueryRequest):
     if chat is None:
         raise HTTPException(status_code=500, detail="LLM не инициализирован. Запустите сервер с правильными параметрами.")
     
+    print(f"Получен запрос: {request}")  # Отладочное сообщение
     user_question = request.question
     response = chat(user_question)
     if response is None:
