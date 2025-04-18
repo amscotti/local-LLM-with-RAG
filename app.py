@@ -86,6 +86,13 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
 
 def main(llm_model_name: str, embedding_model_name: str, documents_path: str, web_mode: bool = False, port: int = 8000) -> None:
     print("Запуск функции main...")  # Отладочное сообщение
+    print(f"Инициализация с параметрами:")  # Отладочное сообщение
+    print(f"  Модель: {llm_model_name}")  # Отладочное сообщение
+    print(f"  Модель встраивания: {embedding_model_name}")  # Отладочное сообщение
+    print(f"  Путь к документам: {documents_path}")  # Отладочное сообщение
+    print(f"  Режим веб-сервера: {'включен' if web_mode else 'выключен'}")  # Отладочное сообщение
+    print(f"  Порт: {port}")  # Отладочное сообщение
+
     success = initialize_llm(llm_model_name, embedding_model_name, documents_path)
     
     if not success:
@@ -94,7 +101,9 @@ def main(llm_model_name: str, embedding_model_name: str, documents_path: str, we
     
     if web_mode:
         print(f"Запуск HTTP сервера на порту {port}...")
+        print(f"Swagger UI доступен по адресу: http://0.0.0.0:{port}/docs")  # Отладочное сообщение
         uvicorn.run(app, host="0.0.0.0", port=port)
+        print("Сервер успешно запущен.")  # Отладочное сообщение после запуска сервера
     else:
         # Консольный режим
         while True:
