@@ -47,3 +47,10 @@ This will start a local web server and open a new tab in your default web browse
 - [PyPDF](https://pypi.org/project/PyPDF2/): A Python library for reading and manipulating PDF files.
 - [Streamlit](https://streamlit.io/): A web framework for creating interactive applications for machine learning and data science projects.
 - [UV](https://astral.sh/uv): A fast and efficient Python package installer and resolver.
+
+
+
+
+
+.venv для пользователя 1
+.venv2dom для пользователя дом
