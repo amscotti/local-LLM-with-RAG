@@ -125,8 +125,24 @@ def getChatChain(llm, db):
     final_chain = loaded_memory | standalone_question | retrieved_documents | answer
 
     def chat(question: str):
-        inputs = {"question": question}
-        result = final_chain.invoke(inputs)
-        memory.save_context(inputs, {"answer": result["answer"].content if hasattr(result["answer"], "content") else result["answer"]})
+        try:
+            print(f"getChatChain: обработка вопроса: {question}")
+            inputs = {"question": question}
+            result = final_chain.invoke(inputs)
+            
+            if "answer" not in result:
+                print("getChatChain: ключ 'answer' отсутствует в результате")
+                return "Не удалось получить ответ от модели"
+                
+            answer_content = result["answer"].content if hasattr(result["answer"], "content") else result["answer"]
+            memory.save_context(inputs, {"answer": answer_content})
+            
+            print(f"getChatChain: успешный ответ: {answer_content[:100]}...")
+            return answer_content
+        except Exception as e:
+            import traceback
+            print(f"getChatChain: ошибка при обработке вопроса: {str(e)}")
+            print(traceback.format_exc())
+            return f"Произошла ошибка при обработке запроса: {str(e)}"
 
     return chat

@@ -30,15 +30,33 @@ async def query(request: QueryRequest):
     
     print(f"Получен запрос: {request}")  # Отладочное сообщение
     user_question = request.question
-    response = chat(user_question)
-    if response is None:
-        raise HTTPException(status_code=500, detail="Получен пустой ответ от LLM.")
     
-    return {"answer": response}
+    try:
+        print(f"Вызываем LLM с вопросом: {user_question}")
+        response = chat(user_question)
+        print(f"Ответ от LLM: {response}")  # Отладочное сообщение
+        
+        if response is None:
+            print("Получен пустой ответ от LLM")
+            raise HTTPException(status_code=500, detail="Получен пустой ответ от LLM.")
+        
+        # Проверяем, начинается ли ответ с "Произошла ошибка"
+        if isinstance(response, str) and response.startswith("Произошла ошибка"):
+            print(f"LLM вернул сообщение об ошибке: {response}")
+            raise HTTPException(status_code=500, detail=response)
+        
+        return {"answer": response}
+    except Exception as e:
+        error_message = f"Ошибка при обработке запроса: {str(e)}"
+        print(error_message)
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=error_message)
 
 @app.post("/initialize")
 async def initialize(request: InitRequest):
     success = initialize_llm(request.model_name, request.embedding_model_name, request.documents_path)
+    
     if not success:
         raise HTTPException(status_code=500, detail="Не удалось инициализировать LLM.")
     return {"message": "LLM успешно инициализирован."}
@@ -53,6 +71,7 @@ async def parse_args():
         "web": args.web,
         "port": args.port
     }
+
 
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str) -> bool:
     global chat, db

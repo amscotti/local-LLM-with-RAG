@@ -54,3 +54,16 @@ This will start a local web server and open a new tab in your default web browse
 
 .venv для пользователя 1
 .venv2dom для пользователя дом
+
+
+Для запуска - uvicorn app:app --host 0.0.0.0 --port 8000 
+
+
+адрес - http://192.168.81.143:8000/docs#/default/initialize_initialize_post
+
+параметры для инициализации - 
+{
+  "model_name": "mistral",
+  "embedding_model_name": "nomic-embed-text",
+  "documents_path": "Research"
+}
