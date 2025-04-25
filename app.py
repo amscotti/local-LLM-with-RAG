@@ -13,7 +13,7 @@ from llm import getChatChain
 app = FastAPI()
 chat = None
 db = None
-# 123123Приём
+# 123123ПриёмGПАвелN
 class QueryRequest(BaseModel):
     question: str
 
