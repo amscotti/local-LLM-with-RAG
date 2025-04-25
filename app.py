@@ -1,12 +1,7 @@
-from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langchain_ollama import ChatOllama
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
-from langchain_community.vectorstores import Chroma
-from sklearn.metrics.pairwise import cosine_similarity
-from typing import List
-
-from langchain_core.documents import Document
 
 from models import check_if_model_is_available
 from document_loader import load_documents_into_database
@@ -37,7 +32,7 @@ async def query(request: QueryRequest):
     user_question = request.question
     
     try:
-        relevant_docs = search_relevant_documents(user_question, db, request.model_name)
+        print(f"Вызываем LLM с вопросом: {user_question}")
         response = chat(user_question)
         print(f"Ответ от LLM: {response}")  # Отладочное сообщение
         
@@ -50,7 +45,7 @@ async def query(request: QueryRequest):
             print(f"LLM вернул сообщение об ошибке: {response}")
             raise HTTPException(status_code=500, detail=response)
         
-        return {"answer": response, "relevant_documents": relevant_docs}
+        return {"answer": response}
     except Exception as e:
         error_message = f"Ошибка при обработке запроса: {str(e)}"
         print(error_message)
@@ -179,16 +174,6 @@ def parse_arguments() -> argparse.Namespace:
     )
     return parser.parse_args()
 
-def search_relevant_documents(query: str, db: Chroma, model_name: str, top_k: int = 5) -> List[Document]:
-    # Создаем эмбеддинг для запроса
-    embedding_model = OllamaEmbeddings(model=model_name)
-    query_embedding = embedding_model.embed_documents([query])[0]
-
-    # Выполняем поиск по векторной базе
-    results = db.similarity_search_by_vector(query_embedding, k=top_k)
-
-    # Возвращаем наиболее релевантные документы
-    return results
 
 if __name__ == "__main__":
     args = parse_arguments()
