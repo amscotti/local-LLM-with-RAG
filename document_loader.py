@@ -13,6 +13,21 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 PERSIST_DIRECTORY = "storage"
 TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 
+def vec_search(embedding_model, query, db, n_top_cos: int = 5):
+    print(f"Searching for query: {query}")
+    query_emb = embedding_model.embed_documents([query])[0]
+    print(f"Query embedding: {query_emb}")
+
+    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
+    print(f"Search results: {search_result}")
+
+    top_chunks = [x.metadata.get('chunk') for x in search_result]
+    top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
+
+    print(f"Top chunks: {top_chunks}")
+    print(f"Top files: {top_files}")
+
+    return top_chunks, top_files
 
 def load_documents_into_database(model_name: str, documents_path: str, reload: bool = True) -> Chroma:
     """
@@ -83,3 +98,19 @@ def load_documents(path: str) -> List[Document]:
         print(f"Loading {file_type} files")
         docs.extend(loader.load())
     return docs
+
+def vec_search(embedding_model, query, db, n_top_cos: int = 5):
+    """
+    Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
+    """
+    # Кодируем запрос в вектор
+    query_emb = embedding_model.embed_documents([query])[0]
+
+    # Поиск в базе данных
+    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
+
+    # Извлечение фрагментов и файлов из метаданных
+    top_chunks = [x.metadata.get('chunk') for x in search_result]
+    top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
+
+    return top_chunks, top_files

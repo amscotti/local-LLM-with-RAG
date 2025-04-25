@@ -1,18 +1,20 @@
-from langchain_ollama import ChatOllama
+from langchain_ollama import ChatOllama, OllamaEmbeddings
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 
 from models import check_if_model_is_available
-from document_loader import load_documents_into_database
+from document_loader import load_documents_into_database, vec_search
 import argparse
 import sys
 
 from llm import getChatChain
 
+# Инициализация глобальных переменных
 app = FastAPI()
 chat = None
 db = None
+embedding_model = None
 # 123123ПриёмGПАвелN
 class QueryRequest(BaseModel):
     question: str
@@ -31,6 +33,9 @@ async def query(request: QueryRequest):
     print(f"Получен запрос: {request}")  # Отладочное сообщение
     user_question = request.question
     
+    # Выполняем векторный поиск фрагментов
+    top_chunks, top_files = vec_search(embedding_model, user_question, db, n_top_cos=5)
+    
     try:
         response = chat(user_question)
         print(f"Ответ от LLM: {response}")  # Отладочное сообщение
@@ -44,7 +49,7 @@ async def query(request: QueryRequest):
             print(f"LLM вернул сообщение об ошибке: {response}")
             raise HTTPException(status_code=500, detail=response)
         
-        return {"answer": response}
+        return {"answer": response, "chunks": top_chunks, "files": top_files}
     except Exception as e:
         error_message = f"Ошибка при обработке запроса: {str(e)}"
         print(error_message)
@@ -73,7 +78,7 @@ async def parse_args():
 
 
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str) -> bool:
-    global chat, db
+    global chat, db, embedding_model
     print("Инициализация LLM...")  # Отладочное сообщение
     try:
         print("Проверка доступности LLM модели...")
@@ -87,6 +92,8 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
     try:
         print("Загрузка документов в базу данных...")
         db = load_documents_into_database(embedding_model_name, documents_path)
+        # Инициализируем модель встраивания для векторного поиска
+        embedding_model = OllamaEmbeddings(model=embedding_model_name)
         print("База данных успешно инициализирована.")
     except FileNotFoundError as e:
         print(f"Ошибка при загрузке документов: {e}")
