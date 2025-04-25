@@ -67,3 +67,10 @@ This will start a local web server and open a new tab in your default web browse
   "embedding_model_name": "nomic-embed-text",
   "documents_path": "Research"
 }
+
+
+{
+  "model_name": "gemma3:27b-it-qat",
+  "embedding_model_name": "snowflake-arctic-embed2:latest",
+  "documents_path": "Research"
+}

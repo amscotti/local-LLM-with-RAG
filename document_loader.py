@@ -81,5 +81,13 @@ def load_documents(path: str) -> List[Document]:
     docs = []
     for file_type, loader in loaders.items():
         print(f"Loading {file_type} files")
-        docs.extend(loader.load())
+        loaded_docs = loader.load()
+        
+        for doc in loaded_docs:
+            doc.metadata['source'] = os.path.basename(doc.metadata['source']) if 'source' in doc.metadata else 'unknown_source'
+            doc.metadata['page'] = '1'
+        
+        print(f"Loaded {len(loaded_docs)} {file_type} files")
+        docs.extend(loaded_docs)
+    print(f"Total loaded {len(docs)} documents")
     return docs
