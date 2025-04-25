@@ -44,9 +44,6 @@ def _combine_documents(
     return document_separator.join(doc_strings)
 
 
-memory = ConversationBufferMemory(return_messages=True, output_key="answer", input_key="question")
-
-
 def getStreamingChain(question: str, memory, llm, db):
     retriever = db.as_retriever(search_kwargs={"k": 10})
     loaded_memory = RunnablePassthrough.assign(
@@ -87,44 +84,47 @@ def getStreamingChain(question: str, memory, llm, db):
 def getChatChain(llm, db):
     retriever = db.as_retriever(search_kwargs={"k": 10})
 
-    loaded_memory = RunnablePassthrough.assign(
-        chat_history=RunnableLambda(memory.load_memory_variables)
-        | itemgetter("history"),
-    )
-
-    standalone_question = {
-        "standalone_question": {
-            "question": lambda x: x["question"],
-            "chat_history": lambda x: get_buffer_string(x["chat_history"]),
-        }
-        | CONDENSE_QUESTION_PROMPT
-        | llm
-        | (lambda x: x.content if hasattr(x, "content") else x)
-    }
-
-    # Now we retrieve the documents
-    retrieved_documents = {
-        "docs": itemgetter("standalone_question") | retriever,
-        "question": lambda x: x["standalone_question"],
-    }
-
-    # Now we construct the inputs for the final prompt
-    final_inputs = {
-        "context": lambda x: _combine_documents(x["docs"]),
-        "question": itemgetter("question"),
-    }
-
-    # And finally, we do the part that returns the answers
-    answer = {
-        "answer": final_inputs
-        | ANSWER_PROMPT
-        | llm.with_config(callbacks=[StreamingStdOutCallbackHandler()]),
-        "docs": itemgetter("docs"),
-    }
-
-    final_chain = loaded_memory | standalone_question | retrieved_documents | answer
-
     def chat(question: str):
+        # Инициализация памяти для каждого запроса
+        memory = ConversationBufferMemory(return_messages=True, output_key="answer", input_key="question")
+        
+        loaded_memory = RunnablePassthrough.assign(
+            chat_history=RunnableLambda(memory.load_memory_variables)
+            | itemgetter("history"),
+        )
+
+        standalone_question = {
+            "standalone_question": {
+                "question": lambda x: x["question"],
+                "chat_history": lambda x: get_buffer_string(x["chat_history"]),
+            }
+            | CONDENSE_QUESTION_PROMPT
+            | llm
+            | (lambda x: x.content if hasattr(x, "content") else x)
+        }
+
+        # Теперь мы извлекаем документы
+        retrieved_documents = {
+            "docs": itemgetter("standalone_question") | retriever,
+            "question": lambda x: x["standalone_question"],
+        }
+
+        # Теперь мы строим входные данные для финального запроса
+        final_inputs = {
+            "context": lambda x: _combine_documents(x["docs"]),
+            "question": itemgetter("question"),
+        }
+
+        # И, наконец, мы делаем часть, которая возвращает ответы
+        answer = {
+            "answer": final_inputs
+            | ANSWER_PROMPT
+            | llm.with_config(callbacks=[StreamingStdOutCallbackHandler()]),
+            "docs": itemgetter("docs"),
+        }
+
+        final_chain = loaded_memory | standalone_question | retrieved_documents | answer
+
         try:
             print(f"getChatChain: обработка вопроса: {question}")
             inputs = {"question": question}
