@@ -4,7 +4,7 @@ from langchain_community.document_loaders import (
     TextLoader
 )
 import os
-from typing import List
+from typing import List, Tuple
 from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
@@ -114,3 +114,32 @@ def vec_search(embedding_model, query, db, n_top_cos: int = 5):
     top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
 
     return top_chunks, top_files
+
+def rerank_results(query: str, results: List[Document], top_k: int = 5) -> List[Tuple[Document, float]]:
+    """
+    Повторно ранжирует результаты на основе дополнительного анализа.
+
+    Args:
+        query (str): Исходный текст запроса.
+        results (List[Document]): Список документов, полученных из векторного поиска.
+        top_k (int): Количество топовых результатов для возврата.
+
+    Returns:
+        List[Tuple[Document, float]]: Список кортежей, содержащих документ и его новый ранг.
+    """
+    # Пример: Используем простую метрику на основе длины совпадения с запросом
+    ranked_results = []
+    for doc in results:
+        # Пример метрики: количество совпадений слов из запроса в документе
+        score = sum(1 for word in query.split() if word in doc.page_content)
+        ranked_results.append((doc, score))
+    
+    # Сортируем результаты по убыванию ранга
+    ranked_results.sort(key=lambda x: x[1], reverse=True)
+    
+    # Возвращаем топовые результаты
+    return ranked_results[:top_k]
+
+# Пример использования
+# results = vec_search(embedding_model, query, db, n_top_cos=10)
+# reranked_results = rerank_results(query, results)
