@@ -9,7 +9,7 @@ from langchain_core.prompts import format_document
 from langchain.prompts.prompt import PromptTemplate
 
 
-condense_question = """Given the following conversation and a follow-up question, rephrase the follow-up question to be a standalone question.
+condense_question = """Учитывая следующий разговор и последующий вопрос, переформулируйте последующий вопрос так, чтобы он стал самостоятельным вопросом.
 
 Chat History:
 {chat_history}
@@ -20,9 +20,9 @@ CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(condense_question)
 
 answer = """
 ### Instruction:
-You're a helpful research assistant, who answers questions based on provided research in a clear way and easy-to-understand way.
-If there is no research, or the research is irrelevant to answering the question, simply reply that you can't answer.
-Please reply with just the detailed answer and your sources. If you're unable to answer the question, do not list sources
+Вы полезный научный ассистент, который отвечает на вопросы на основе предоставленных исследований ясным и понятным образом.
+Если нет исследований или исследования не имеют отношения к ответу на вопрос, просто ответьте, что вы не можете ответить.
+Пожалуйста, отвечайте только подробным ответом и вашими источниками. Если вы не можете ответить на вопрос, не указывайте источники.
 
 ## Research:
 {context}
