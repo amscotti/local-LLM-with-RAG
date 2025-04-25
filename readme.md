@@ -74,3 +74,9 @@ This will start a local web server and open a new tab in your default web browse
   "embedding_model_name": "snowflake-arctic-embed2:latest",
   "documents_path": "Research"
 }
+
+{
+  "model_name": "ilyagusev/saiga_llama3:latest",
+  "embedding_model_name": "snowflake-arctic-embed2:latest",
+  "documents_path": "Research"
+}
