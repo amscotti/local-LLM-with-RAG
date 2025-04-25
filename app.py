@@ -32,7 +32,6 @@ async def query(request: QueryRequest):
     user_question = request.question
     
     try:
-        print(f"Вызываем LLM с вопросом: {user_question}")
         response = chat(user_question)
         print(f"Ответ от LLM: {response}")  # Отладочное сообщение
         
