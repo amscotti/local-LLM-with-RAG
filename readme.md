@@ -5,7 +5,7 @@
 </p>
 
 
-Thank you very much to amscotti whose repository I used as a basis. Thanks to him, I was able to implement this code
+Thank you very much to [amscotti](https://github.com/amscotti) whose repository I used as a basis. Thanks to him, I was able to implement this code
 
 
 
