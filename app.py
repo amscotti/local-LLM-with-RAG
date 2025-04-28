@@ -1,7 +1,8 @@
 from langchain_ollama import ChatOllama, OllamaEmbeddings
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 import uvicorn
+import os
 
 from models import check_if_model_is_available
 from document_loader import load_documents_into_database, vec_search
@@ -76,6 +77,18 @@ async def parse_args():
         "port": args.port
     }
 
+@app.post("/upload-file")
+async def upload_file(file: UploadFile = File(...)):
+    # Проверка на уникальность имени файла
+    if file.filename in os.listdir("Research"):  # Предполагается, что "Research" - это папка для хранения файлов
+        return {"message": "Файл с таким именем уже существует."}
+
+    # Сохранение файла
+    file_location = f"Research/{file.filename}"
+    with open(file_location, "wb") as f:
+        f.write(await file.read())
+
+    return {"message": f"Файл '{file.filename}' успешно загружен."}
 
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str) -> bool:
     global chat, db, embedding_model
