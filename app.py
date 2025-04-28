@@ -196,7 +196,7 @@ def parse_arguments() -> argparse.Namespace:
 # Функция цели для оптимизации
 def objective(trial):
     # Определите гиперпараметры, которые вы хотите оптимизировать
-    embedding_model_name = trial.suggest_categorical("embedding_model_name", ["nomic-embed-text", "another-model"])
+    embedding_model_name = trial.suggest_categorical("embedding_model_name", ["snowflake-arctic-embed2:latest"])
     learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-1)
     batch_size = trial.suggest_int("batch_size", 1, 32)
     chunk_size = trial.suggest_int("chunk_size", 100, 2000)
