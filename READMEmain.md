@@ -4,6 +4,11 @@
     <img src="images/image.png" alt="Скриншот веб-интерфейса Streamlit" width="600">
 </p>
 
+
+Thank you very much to [amscotti](https://github.com/amscotti) whose repository I used as a basis. Thanks to him, I was able to implement this code
+
+
+
 ## Требования
 - [Ollama](https://ollama.ai/) версия 0.5.7 или выше.
 - [Python] версия 3.13 или выше.
@@ -28,3 +33,6 @@
 - [PyPDF](https://pypi.org/project/PyPDF2/): Библиотека Python для чтения и манипуляции PDF файлами.
 - [Streamlit](https://streamlit.io/): Веб-фреймворк для создания интерактивных приложений для проектов в области машинного обучения и науки о данных.
 - [UV](https://astral.sh/uv): Быстрый и эффективный установщик и резольвер пакетов Python.
+
+
+
