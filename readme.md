@@ -80,3 +80,5 @@ This will start a local web server and open a new tab in your default web browse
   "embedding_model_name": "snowflake-arctic-embed2:latest",
   "documents_path": "Research"
 }
+
+проверь
