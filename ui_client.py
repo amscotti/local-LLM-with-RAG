@@ -1,6 +1,35 @@
 import streamlit as st
 import os
 import requests
+import subprocess
+import threading
+import time
+import signal
+import atexit
+
+# Запуск API сервера в отдельном потоке
+def start_api_server():
+    global api_process
+    api_process = subprocess.Popen(
+        ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True
+    )
+    return api_process
+
+# Остановка API сервера при завершении работы
+def stop_api_server():
+    if 'api_process' in globals() and api_process.poll() is None:
+        os.kill(api_process.pid, signal.SIGTERM)
+        print("API сервер остановлен.")
+
+# Запуск API сервера перед инициализацией интерфейса
+api_process = start_api_server()
+atexit.register(stop_api_server)
+
+# Даем серверу немного времени для запуска
+time.sleep(3)
 
 # Настройки API
 API_URL = "http://localhost:8000"  # Убедитесь, что этот URL соответствует вашему API
