@@ -82,7 +82,7 @@ async def optimize():
     try:
         # Запуск оптимизации
         study = optuna.create_study(direction="maximize")
-        study.optimize(objective, n_trials=100)  # Укажите количество испытаний
+        study.optimize(objective, n_trials=1000)  # Укажите количество испытаний
 
         # Возврат лучших гиперпараметров
         return {"best_hyperparameters": study.best_params}
