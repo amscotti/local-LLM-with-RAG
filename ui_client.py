@@ -7,6 +7,9 @@ API_URL = "http://localhost:8000"  # Убедитесь, что этот URL с�
 
 st.title("База знаний НПО \"СПЕКТРОН\"", anchor=None)
 
+# Добавляем кнопку для перехода в админку
+st.sidebar.markdown("[Перейти в админку](/admin)", unsafe_allow_html=True)
+
 # Инициализируем историю чата
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -35,4 +38,4 @@ if prompt := st.chat_input("Задайте вопрос..."):
                 # Добавляем ответ ассистента в историю
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
-                st.error(f"Ошибка: {response.json().get('detail')}") 
+                st.error(f"Ошибка: {response.json().get('detail')}")
