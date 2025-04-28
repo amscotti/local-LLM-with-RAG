@@ -11,7 +11,7 @@ from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 PERSIST_DIRECTORY = "storage"
-TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324)
 
 def vec_search(embedding_model, query, db, n_top_cos: int = 5):
     print(f"Searching for query: {query}")
