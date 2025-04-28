@@ -77,6 +77,17 @@ async def parse_args():
         "port": args.port
     }
 
+@app.post("/optimize")
+async def optimize():
+    try:
+        # Запуск оптимизации
+        study = optuna.create_study(direction="maximize")
+        study.optimize(objective, n_trials=100)  # Укажите количество испытаний
+
+        # Возврат лучших гиперпараметров
+        return {"best_hyperparameters": study.best_params}
+    except Exception as e:
+        return HTTPException(status_code=500, detail=str(e))
 
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str) -> bool:
     global chat, db, embedding_model
@@ -200,13 +211,6 @@ def objective(trial):
     accuracy = train_and_evaluate_model(llm, db, learning_rate, batch_size, chunk_size, chunk_overlap, n_top_cos)
 
     return accuracy  # Возвращаем значение, которое нужно максимизировать
-
-# Запуск оптимизации
-study = optuna.create_study(direction="maximize")  # Или "minimize" в зависимости от вашей задачи
-study.optimize(objective, n_trials=100)  # Укажите количество испытаний
-
-# Вывод лучших гиперпараметров
-print("Best hyperparameters: ", study.best_params)
 
 def train_and_evaluate_model(llm, db, learning_rate, batch_size, chunk_size, chunk_overlap, n_top_cos):
     """
