@@ -2,7 +2,6 @@ from langchain_ollama import ChatOllama, OllamaEmbeddings
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
-import optuna
 
 from models import check_if_model_is_available
 from document_loader import load_documents_into_database, vec_search
@@ -77,17 +76,6 @@ async def parse_args():
         "port": args.port
     }
 
-@app.post("/optimize")
-async def optimize():
-    try:
-        # Запуск оптимизации
-        study = optuna.create_study(direction="maximize")
-        study.optimize(objective, n_trials=1000)  # Укажите количество испытаний
-
-        # Возврат лучших гиперпараметров
-        return {"best_hyperparameters": study.best_params}
-    except Exception as e:
-        return HTTPException(status_code=500, detail=str(e))
 
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str) -> bool:
     global chat, db, embedding_model
@@ -193,52 +181,6 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
-# Функция цели для оптимизации
-def objective(trial):
-    # Определите гиперпараметры, которые вы хотите оптимизировать
-    embedding_model_name = trial.suggest_categorical("embedding_model_name", ["snowflake-arctic-embed2:latest"])
-    learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-1)
-    batch_size = trial.suggest_int("batch_size", 1, 32)
-    chunk_size = trial.suggest_int("chunk_size", 100, 2000)
-    chunk_overlap = trial.suggest_int("chunk_overlap", 50, 600)
-    n_top_cos = trial.suggest_int("n_top_cos", 1, 8)
-
-    # Загрузите документы и инициализируйте модель
-    db = load_documents_into_database(embedding_model_name, "Research")
-    llm = ChatOllama(model=embedding_model_name)
-
-    # Здесь вы можете обучить модель и оценить её производительность
-    accuracy = train_and_evaluate_model(llm, db, learning_rate, batch_size, chunk_size, chunk_overlap, n_top_cos)
-
-    return accuracy  # Возвращаем значение, которое нужно максимизировать
-
-def train_and_evaluate_model(llm, db, learning_rate, batch_size, chunk_size, chunk_overlap, n_top_cos):
-    """
-    Обучает модель и оценивает её производительность.
-
-    Args:
-        llm: Модель для обучения.
-        db: База данных для получения данных.
-        learning_rate: Скорость обучения.
-        batch_size: Размер пакета для обучения.
-        chunk_size: Размер чанка для обработки.
-        chunk_overlap: Перекрытие чанков.
-        n_top_cos: Количество топовых результатов для поиска.
-
-    Returns:
-        float: Точность модели на валидационном наборе данных.
-    """
-    # Здесь должна быть логика обучения модели
-    # Например, вы можете использовать данные из базы данных для обучения
-
-    # Пример: просто возвращаем случайное значение для имитации точности
-    import random
-    accuracy = random.uniform(0.5, 1.0)  # Имитация точности
-    return accuracy
-
-
 if __name__ == "__main__":
     args = parse_arguments()
     main(args.model, args.embedding_model, args.path, args.web, args.port)
-
-

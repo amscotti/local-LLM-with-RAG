@@ -82,3 +82,15 @@ This will start a local web server and open a new tab in your default web browse
 }
 
 проверь
+
+
+{
+  "best_hyperparameters": {
+    "embedding_model_name": "snowflake-arctic-embed2:latest",
+    "learning_rate": 0.004440919399158963,
+    "batch_size": 24,
+    "chunk_size": 861,
+    "chunk_overlap": 324,
+    "n_top_cos": 6
+  }
+}
