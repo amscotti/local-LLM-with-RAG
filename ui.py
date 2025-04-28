@@ -16,7 +16,7 @@ PATH = "Research"
 # Настройки API
 API_URL = "http://localhost:8000"  # Убедитесь, что этот URL соответствует вашему API
 
-st.title("Интерфейс для Local LLM с RAG")
+st.title("Админка")
 
 # Инициализация списка моделей
 if "list_of_models" not in st.session_state:

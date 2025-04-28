@@ -56,8 +56,9 @@ This will start a local web server and open a new tab in your default web browse
 .venv2dom для пользователя дом
 
 
-Для запуска - uvicorn app:app --host 0.0.0.0 --port 8000 
-
+Для запуска СЕРВЕРА - uvicorn app:app --host 0.0.0.0 --port 8000 
+АДМИНКИ - streamlit run ui.py
+ИНТЕРФЕЙСА ПОЛЬЗОВАТЕЛЯ - streamlit run ui_client.py
 
 адрес - http://192.168.81.143:8000/docs#/default/initialize_initialize_post
 
