@@ -4,15 +4,30 @@ from langchain_community.document_loaders import (
     TextLoader
 )
 import os
-from typing import List
+from typing import List, Tuple
 from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 PERSIST_DIRECTORY = "storage"
-TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324)
 
+def vec_search(embedding_model, query, db, n_top_cos: int = 5):
+    print(f"Searching for query: {query}")
+    query_emb = embedding_model.embed_documents([query])[0]
+    print(f"Query embedding: {query_emb}")
+
+    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
+    print(f"Search results: {search_result}")
+
+    top_chunks = [x.metadata.get('chunk') for x in search_result]
+    top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
+
+    print(f"Top chunks: {top_chunks}")
+    print(f"Top files: {top_files}")
+
+    return top_chunks, top_files
 
 def load_documents_into_database(model_name: str, documents_path: str, reload: bool = True) -> Chroma:
     """
@@ -77,9 +92,54 @@ def load_documents(path: str) -> List[Document]:
             show_progress=True,
         ),
     }
-
+# 
     docs = []
     for file_type, loader in loaders.items():
         print(f"Loading {file_type} files")
         docs.extend(loader.load())
     return docs
+
+def vec_search(embedding_model, query, db, n_top_cos: int = 5):
+    """
+    Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
+    """
+    # Кодируем запрос в вектор
+    query_emb = embedding_model.embed_documents([query])[0]
+
+    # Поиск в базе данных
+    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
+
+    # Извлечение фрагментов и файлов из метаданных
+    top_chunks = [x.metadata.get('chunk') for x in search_result]
+    top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
+
+    return top_chunks, top_files
+
+def rerank_results(query: str, results: List[Document], top_k: int = 5) -> List[Tuple[Document, float]]:
+    """
+    Повторно ранжирует результаты на основе дополнительного анализа.
+
+    Args:
+        query (str): Исходный текст запроса.
+        results (List[Document]): Список документов, полученных из векторного поиска.
+        top_k (int): Количество топовых результатов для возврата.
+
+    Returns:
+        List[Tuple[Document, float]]: Список кортежей, содержащих документ и его новый ранг.
+    """
+    # Пример: Используем простую метрику на основе длины совпадения с запросом
+    ranked_results = []
+    for doc in results:
+        # Пример метрики: количество совпадений слов из запроса в документе
+        score = sum(1 for word in query.split() if word in doc.page_content)
+        ranked_results.append((doc, score))
+    
+    # Сортируем результаты по убыванию ранга
+    ranked_results.sort(key=lambda x: x[1], reverse=True)
+    
+    # Возвращаем топовые результаты
+    return ranked_results[:top_k]
+
+# Пример использования
+# results = vec_search(embedding_model, query, db, n_top_cos=10)
+# reranked_results = rerank_results(query, results)

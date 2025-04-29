@@ -9,7 +9,7 @@ from langchain_core.prompts import format_document
 from langchain.prompts.prompt import PromptTemplate
 
 
-condense_question = """Given the following conversation and a follow-up question, rephrase the follow-up question to be a standalone question.
+condense_question = """Учитывая следующий разговор и последующий вопрос, переформулируйте последующий вопрос так, чтобы он стал самостоятельным вопросом.
 
 Chat History:
 {chat_history}
@@ -20,9 +20,9 @@ CONDENSE_QUESTION_PROMPT = PromptTemplate.from_template(condense_question)
 
 answer = """
 ### Instruction:
-You're a helpful research assistant, who answers questions based on provided research in a clear way and easy-to-understand way.
-If there is no research, or the research is irrelevant to answering the question, simply reply that you can't answer.
-Please reply with just the detailed answer and your sources. If you're unable to answer the question, do not list sources
+Вы полезный научный ассистент, который отвечает на вопросы на основе предоставленных исследований ясным и понятным образом.
+Если нет исследований или исследования не имеют отношения к ответу на вопрос, просто ответьте, что вы не можете ответить.
+Пожалуйста, отвечайте только подробным ответом и вашими источниками. Если вы не можете ответить на вопрос, не указывайте источники.
 
 ## Research:
 {context}
@@ -42,9 +42,6 @@ def _combine_documents(
 ):
     doc_strings = [format_document(doc, document_prompt) for doc in docs]
     return document_separator.join(doc_strings)
-
-
-memory = ConversationBufferMemory(return_messages=True, output_key="answer", input_key="question")
 
 
 def getStreamingChain(question: str, memory, llm, db):
@@ -87,46 +84,65 @@ def getStreamingChain(question: str, memory, llm, db):
 def getChatChain(llm, db):
     retriever = db.as_retriever(search_kwargs={"k": 10})
 
-    loaded_memory = RunnablePassthrough.assign(
-        chat_history=RunnableLambda(memory.load_memory_variables)
-        | itemgetter("history"),
-    )
-
-    standalone_question = {
-        "standalone_question": {
-            "question": lambda x: x["question"],
-            "chat_history": lambda x: get_buffer_string(x["chat_history"]),
-        }
-        | CONDENSE_QUESTION_PROMPT
-        | llm
-        | (lambda x: x.content if hasattr(x, "content") else x)
-    }
-
-    # Now we retrieve the documents
-    retrieved_documents = {
-        "docs": itemgetter("standalone_question") | retriever,
-        "question": lambda x: x["standalone_question"],
-    }
-
-    # Now we construct the inputs for the final prompt
-    final_inputs = {
-        "context": lambda x: _combine_documents(x["docs"]),
-        "question": itemgetter("question"),
-    }
-
-    # And finally, we do the part that returns the answers
-    answer = {
-        "answer": final_inputs
-        | ANSWER_PROMPT
-        | llm.with_config(callbacks=[StreamingStdOutCallbackHandler()]),
-        "docs": itemgetter("docs"),
-    }
-
-    final_chain = loaded_memory | standalone_question | retrieved_documents | answer
-
     def chat(question: str):
-        inputs = {"question": question}
-        result = final_chain.invoke(inputs)
-        memory.save_context(inputs, {"answer": result["answer"].content if hasattr(result["answer"], "content") else result["answer"]})
+        # Инициализация памяти для каждого запроса
+        memory = ConversationBufferMemory(return_messages=True, output_key="answer", input_key="question")
+        
+        loaded_memory = RunnablePassthrough.assign(
+            chat_history=RunnableLambda(memory.load_memory_variables)
+            | itemgetter("history"),
+        )
+
+        standalone_question = {
+            "standalone_question": {
+                "question": lambda x: x["question"],
+                "chat_history": lambda x: get_buffer_string(x["chat_history"]),
+            }
+            | CONDENSE_QUESTION_PROMPT
+            | llm
+            | (lambda x: x.content if hasattr(x, "content") else x)
+        }
+
+        # Теперь мы извлекаем документы
+        retrieved_documents = {
+            "docs": itemgetter("standalone_question") | retriever,
+            "question": lambda x: x["standalone_question"],
+        }
+
+        # Теперь мы строим входные данные для финального запроса
+        final_inputs = {
+            "context": lambda x: _combine_documents(x["docs"]),
+            "question": itemgetter("question"),
+        }
+
+        # И, наконец, мы делаем часть, которая возвращает ответы
+        answer = {
+            "answer": final_inputs
+            | ANSWER_PROMPT
+            | llm.with_config(callbacks=[StreamingStdOutCallbackHandler()]),
+            "docs": itemgetter("docs"),
+        }
+
+        final_chain = loaded_memory | standalone_question | retrieved_documents | answer
+
+        try:
+            print(f"getChatChain: обработка вопроса: {question}")
+            inputs = {"question": question}
+            result = final_chain.invoke(inputs)
+            
+            if "answer" not in result:
+                print("getChatChain: ключ 'answer' отсутствует в результате")
+                return "Не удалось получить ответ от модели"
+                
+            answer_content = result["answer"].content if hasattr(result["answer"], "content") else result["answer"]
+            memory.save_context(inputs, {"answer": answer_content})
+            
+            print(f"getChatChain: успешный ответ: {answer_content[:100]}...")
+            return answer_content
+        except Exception as e:
+            import traceback
+            print(f"getChatChain: ошибка при обработке вопроса: {str(e)}")
+            print(traceback.format_exc())
+            return f"Произошла ошибка при обработке запроса: {str(e)}"
 
     return chat
