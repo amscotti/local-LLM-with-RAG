@@ -1,13 +1,22 @@
-version: '3.8'
+version: '3'
 
 services:
-  app:
+  rag-app:
     build: .
     ports:
-      - "8000:8000"
+      - "8000:8000"  # FastAPI порт
+      - "8501:8501"  # Streamlit порт
+    volumes:
+      - ./Research:/app/Research  # Монтирование папки документов
+    environment:
+      - OLLAMA_HOST=host.docker.internal  # Для Windows/Mac OS доступ к Ollama на хосте
+
+    # Для корректной работы с хостом в Docker на Windows/Mac
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
-      - local_network
+      - rag-network
 
 networks:
-  local_network:
-    driver: bridge
+  rag-network:
+    driver: bridge 

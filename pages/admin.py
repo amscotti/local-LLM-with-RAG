@@ -151,4 +151,3 @@ else:
 # Кнопка для перехода в админку
 if st.button("Перейти в админку"):
     st.session_state.redirect_to_admin = True
-    st.experimental_rerun()  # Перезапускаем приложение для применения изменений
