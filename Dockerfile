@@ -14,4 +14,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8000
 
 # Запускаем приложение
-CMD ["streamlit", "run", "ui_client.py", "--server.port=8000", "--server.address=0.0.0.0"]
+CMD ["python", "start.py"]
