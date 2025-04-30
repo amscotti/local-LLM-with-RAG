@@ -20,7 +20,7 @@ embedding_model = None
 
 # Добавляем новый класс для запросов на генерацию без RAG
 class GenerateRequest(BaseModel):
-    prompt: str
+    messages: str
     model: str = "ilyagusev/saiga_llama3:latest"
 
 class GenerateResponse(BaseModel):
@@ -38,7 +38,7 @@ async def generate(request: GenerateRequest):
         llm = ChatOllama(model=request.model)
         
         # Отправляем запрос напрямую к модели без использования RAG
-        response = llm.invoke(request.prompt)
+        response = llm.invoke(request.messages)
         
         # Извлекаем ответ из объекта response
         if hasattr(response, "content"):
