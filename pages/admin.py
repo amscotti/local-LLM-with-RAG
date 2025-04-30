@@ -33,6 +33,12 @@ if st.session_state.redirect_to_admin:
                 st.error("Неверный пароль. Попробуйте снова.")
     else:
         st.title("Админка")
+        
+        # Добавляем навигацию в боковую панель
+        st.sidebar.markdown("### Навигация")
+        st.sidebar.markdown("[Главная страница](/)")
+        st.sidebar.markdown("[Генерация без RAG](/generate)")
+        
         # Инициализация списка моделей
         if "list_of_models" not in st.session_state:
             st.session_state["list_of_models"] = get_list_of_models()
