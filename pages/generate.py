@@ -11,9 +11,11 @@ st.title("Генерация без RAG")
 if "list_of_models" not in st.session_state:
     st.session_state["list_of_models"] = get_list_of_models()
 
-# Раздел для выбора модели
-st.header("Параметры генерации")
-selected_model = st.selectbox("Выберите модель", st.session_state["list_of_models"], index=0)
+# Удаляем раздел для выбора модели
+# selected_model = st.selectbox("Выберите модель", st.session_state["list_of_models"], index=0)
+
+# Заменяем на использование первой модели из списка
+selected_model = st.session_state["list_of_models"][0] if st.session_state["list_of_models"] else None
 
 # Инициализируем историю чата
 if "generate_messages" not in st.session_state:
