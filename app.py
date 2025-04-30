@@ -16,7 +16,48 @@ app = FastAPI()
 chat = None
 db = None
 embedding_model = None
-# 123123ПриёмGПАвелN
+
+
+# Добавляем новый класс для запросов на генерацию без RAG
+class GenerateRequest(BaseModel):
+    prompt: str
+    model: str = "ilyagusev/saiga_llama3:latest"
+
+class GenerateResponse(BaseModel):
+    text: str
+    model: str = "ilyagusev/saiga_llama3:latest"
+
+# Добавляем новый эндпоинт для генерации без использования RAG
+@app.post("/generate")
+async def generate(request: GenerateRequest):
+    try:
+        # Проверяем, доступна ли модель
+        check_if_model_is_available(request.model)
+        
+        # Создаем экземпляр модели
+        llm = ChatOllama(model=request.model)
+        
+        # Отправляем запрос напрямую к модели без использования RAG
+        response = llm.invoke(request.prompt)
+        
+        # Извлекаем ответ из объекта response
+        if hasattr(response, "content"):
+            response_text = response.content
+        else:
+            response_text = str(response)
+            
+        return GenerateResponse(text=response_text, model=request.model)
+    except Exception as e:
+        error_message = f"Ошибка при обработке запроса на генерацию: {str(e)}"
+        print(error_message)
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=error_message)
+    
+
+
+
+# Эндпоинт для векторного поиска
 class QueryRequest(BaseModel):
     question: str
 
@@ -58,6 +99,8 @@ async def query(request: QueryRequest):
         print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=error_message)
 
+
+# Эндпоинт для инициализации LLM
 @app.post("/initialize")
 async def initialize(request: InitRequest):
     success = initialize_llm(request.model_name, request.embedding_model_name, request.documents_path)
@@ -66,6 +109,7 @@ async def initialize(request: InitRequest):
         raise HTTPException(status_code=500, detail="Не удалось инициализировать LLM.")
     return {"message": "LLM успешно инициализирован."}
 
+# Эндпоинт для парсинга аргументов
 @app.get("/parse-args")
 async def parse_args():
     args = parse_arguments()
@@ -77,6 +121,7 @@ async def parse_args():
         "port": args.port
     }
 
+# Эндпоинт для загрузки файлов
 @app.post("/upload-file")
 async def upload_file(file: UploadFile = File(...)):
     # Проверка на уникальность имени файла
@@ -89,6 +134,9 @@ async def upload_file(file: UploadFile = File(...)):
         f.write(await file.read())
 
     return {"message": f"Файл '{file.filename}' успешно загружен."}
+
+
+
 
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str) -> bool:
     global chat, db, embedding_model
@@ -158,7 +206,6 @@ def main(llm_model_name: str, embedding_model_name: str, documents_path: str, we
             except KeyboardInterrupt:
                 break
 
-
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run local LLM with RAG with Ollama.")
     parser.add_argument(
@@ -192,7 +239,6 @@ def parse_arguments() -> argparse.Namespace:
         help="Port for the web server (when using --web).",
     )
     return parser.parse_args()
-
 
 if __name__ == "__main__":
     args = parse_arguments()
