@@ -7,10 +7,7 @@ API_URL = "http://localhost:8000"  # Убедитесь, что этот URL с�
 
 st.title("База знаний НПО \"СПЕКТРОН\"", anchor=None)
 
-# Добавляем навигацию в боковую панель
-st.sidebar.markdown("### Навигация")
-st.sidebar.markdown("[Перейти в админку](/admin)", unsafe_allow_html=True)
-st.sidebar.markdown("[Генерация без RAG](/generate)", unsafe_allow_html=True)
+
 
 # Инициализируем историю чата
 if "messages" not in st.session_state:

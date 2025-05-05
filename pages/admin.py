@@ -34,10 +34,7 @@ if st.session_state.redirect_to_admin:
     else:
         st.title("Админка")
         
-        # Добавляем навигацию в боковую панель
-        st.sidebar.markdown("### Навигация")
-        st.sidebar.markdown("[Главная страница](/)")
-        st.sidebar.markdown("[Генерация без RAG](/generate)")
+
         
         # Инициализация списка моделей
         if "list_of_models" not in st.session_state:
@@ -121,8 +118,7 @@ if st.session_state.redirect_to_admin:
 else:
     st.title("База знаний НПО \"СПЕКТРОН\"", anchor=None)
 
-    # Добавляем кнопку для перехода в админку
-    st.sidebar.markdown("[Перейти в админку](/admin)", unsafe_allow_html=True)
+
 
     # Инициализируем историю чата
     if "messages" not in st.session_state:

@@ -69,7 +69,3 @@ if st.session_state.generate_messages and st.button("Очистить истор
     st.session_state.generate_messages = []
     st.experimental_rerun()
 
-# Добавляем навигацию
-st.sidebar.markdown("### Навигация")
-st.sidebar.markdown("[Главная страница](/)")
-st.sidebar.markdown("[Админка](/admin)") 
