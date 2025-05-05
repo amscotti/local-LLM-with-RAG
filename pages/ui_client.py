@@ -5,9 +5,9 @@ import requests
 # Настройки API
 API_URL = "http://localhost:8000"  # Убедитесь, что этот URL соответствует вашему API
 
+
+
 st.title("База знаний НПО \"СПЕКТРОН\"", anchor=None)
-
-
 
 # Инициализируем историю чата
 if "messages" not in st.session_state:
