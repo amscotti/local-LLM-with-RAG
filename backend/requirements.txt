@@ -1,0 +1,13 @@
+fastapi==0.115.8
+uvicorn==0.34.0
+sqlalchemy==2.0.38
+alembic==1.15.2
+psycopg2-binary==2.9.9
+pydantic==2.11.3
+python-multipart==0.0.20
+langchain==0.3.24
+langchain-ollama==0.2.3
+ollama==0.4.7
+python-dotenv==1.0.1
+numpy==1.26.4
+pydantic-settings==2.7.1 

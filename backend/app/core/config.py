@@ -11,9 +11,9 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = os.getenv("POSTGRES_DB", "rag_db")
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}/{POSTGRES_DB}"
+        f"mysql+pymysql://root:123123@localhost/rag_db"
     )
-    
+    # AI
     OLLAMA_HOST: str = os.getenv("OLLAMA_HOST", "http://ollama:11434")
     DEFAULT_LLM_MODEL: str = os.getenv("DEFAULT_LLM_MODEL", "mistral")
     DEFAULT_EMBEDDING_MODEL: str = os.getenv("DEFAULT_EMBEDDING_MODEL", "nomic-embed-text")
