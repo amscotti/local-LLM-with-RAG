@@ -24,4 +24,4 @@ RUN mkdir -p Research
 EXPOSE 8000 8501
 
 # Команда для запуска FastAPI сервера и Streamlit
-CMD ["bash", "-c", "uvicorn app:app --host 0.0.0.0 --port 8000 & streamlit run ui_client.py"] 
+CMD ["bash", "-c", "uvicorn app:app --host 0.0.0.0 --port 8000 & streamlit run main_page.py"] 
