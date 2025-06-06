@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 
-from models_db import User
+from models_db import User, Department, Access
 from document_loader import load_documents_into_database, vec_search
 import argparse
 import sys
@@ -319,6 +319,30 @@ app.add_middleware(
     allow_methods=["*"],  # Разрешить все методы
     allow_headers=["*"],  # Разрешить все заголовки
 )
+
+@app.get("/user/{id}")
+async def get_user(id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == id).first()
+    if user is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    
+    # Получаем название отдела
+    department = db.query(Department).filter(Department.id == user.department_id).first()
+    department_name = department.department_name if department else "Неизвестный отдел"
+
+    # Получаем название доступа
+    access = db.query(Access).filter(Access.id == user.access_id).first()
+    access_name = access.access_name if access else "Неизвестный доступ"
+
+    return {
+        "login": user.login,
+        "role_id": user.role_id,
+        "department_name": department_name,
+        "access_name": access_name,
+    }
+
+
+
 
 if __name__ == "__main__":
     args = parse_arguments()
