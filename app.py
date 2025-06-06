@@ -3,6 +3,8 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from pydantic import BaseModel
 import uvicorn
 import os
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
 
 from models import check_if_model_is_available
 from document_loader import load_documents_into_database, vec_search
@@ -17,6 +19,12 @@ chat = None
 db = None
 embedding_model = None
 
+# Настройки подключения к базе данных
+DATABASE_URL = "mysql+mysqlconnector://root:12345678@localhost:3306/db"
+
+# Создание движка и сессии
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Добавляем новый класс для запросов на генерацию без RAG
 class GenerateRequest(BaseModel):
@@ -135,8 +143,18 @@ async def upload_file(file: UploadFile = File(...)):
 
     return {"message": f"Файл '{file.filename}' успешно загружен."}
 
-
-
+@app.get("/check_db_connection")
+async def check_db_connection():
+    try:
+        # Создаем сессию
+        db = SessionLocal()
+        # Выполняем простой запрос для проверки подключения
+        db.execute(text("SELECT 1"))
+        return {"message": "Подключение к базе данных успешно!"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка подключения к базе данных: {str(e)}")
+    finally:
+        db.close()
 
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str) -> bool:
     global chat, db, embedding_model
