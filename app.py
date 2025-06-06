@@ -1,15 +1,17 @@
 from langchain_ollama import ChatOllama, OllamaEmbeddings
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from pydantic import BaseModel
 import uvicorn
 import os
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
+from passlib.context import CryptContext
 
-from models import check_if_model_is_available
+from models_db import User
 from document_loader import load_documents_into_database, vec_search
 import argparse
 import sys
+from database import get_db
 
 from llm import getChatChain
 
@@ -18,6 +20,7 @@ app = FastAPI()
 chat = None
 db = None
 embedding_model = None
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Настройки подключения к базе данных
 DATABASE_URL = "mysql+mysqlconnector://root:123123@localhost:3306/db"
@@ -257,6 +260,51 @@ def parse_arguments() -> argparse.Namespace:
         help="Port for the web server (when using --web).",
     )
     return parser.parse_args()
+
+class UserCreate(BaseModel):
+    login: str
+    password: str
+    role_id: int
+    department_id: int
+    access_id: int
+# role_id - 1
+# department_id - 5
+# access_id - 3
+
+@app.post("/register")
+async def register(user: UserCreate, db: Session = Depends(get_db)):
+    # Проверка существования пользователя
+    existing_user = db.query(User).filter(User.login == user.login).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Пользователь уже существует")
+
+    # Хеширование пароля
+    hashed_password = pwd_context.hash(user.password)
+    new_user = User(
+        login=user.login,
+        password=hashed_password,
+        role_id=user.role_id,
+        department_id=user.department_id,
+        access_id=user.access_id
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {"message": "Пользователь успешно зарегистрирован"}
+
+class UserLogin(BaseModel):
+    login: str
+    password: str
+
+@app.post("/login")
+async def login(user: UserLogin, db: Session = Depends(get_db)):
+    db_user = db.query(User).filter(User.login == user.login).first()
+    if not db_user or not pwd_context.verify(user.password, db_user.password):
+        raise HTTPException(status_code=400, detail="Неверный логин или пароль")
+
+    return {"message": "Успешная авторизация"}
 
 if __name__ == "__main__":
     args = parse_arguments()
