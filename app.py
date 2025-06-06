@@ -6,6 +6,7 @@ import os
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
+from fastapi.middleware.cors import CORSMiddleware
 
 from models_db import User
 from document_loader import load_documents_into_database, vec_search
@@ -300,11 +301,24 @@ class UserLogin(BaseModel):
 
 @app.post("/login")
 async def login(user: UserLogin, db: Session = Depends(get_db)):
+    # Отладочное сообщение для проверки входящих данных
+    print("Полученные данные для входа:", user)
+
     db_user = db.query(User).filter(User.login == user.login).first()
     if not db_user or not pwd_context.verify(user.password, db_user.password):
         raise HTTPException(status_code=400, detail="Неверный логин или пароль")
+    print("Полученные данные для входа:", user)
 
     return {"message": "Успешная авторизация"}
+    print("Полученные данные для входа:", user)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Или укажите конкретные домены
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешить все методы
+    allow_headers=["*"],  # Разрешить все заголовки
+)
 
 if __name__ == "__main__":
     args = parse_arguments()
