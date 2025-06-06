@@ -92,33 +92,33 @@
             </div>
           </div>
           <div class="card-body">
-            <form role="form">
+            <form role="form" @submit.prevent="handleRegister">
               <div class="mb-3">
-                <vsud-input type="text" placeholder="Name" aria-label="Name" />
+                <vsud-input type="text" placeholder="Логин" aria-label="Login" v-model="login" />
               </div>
               <div class="mb-3">
-                <vsud-input type="email" placeholder="Email" aria-label="Email" />
+                <vsud-input type="password" placeholder="Пароль" aria-label="Password" v-model="password" />
               </div>
-              <div class="mb-3">
-                <vsud-input type="password" placeholder="Password" aria-label="Password" />
+              <div v-if="errorMessage" class="alert alert-danger text-white" role="alert">
+                {{ errorMessage }}
               </div>
-              <vsud-checkbox id="flexCheckDefault" checked>
-                I agree the
+              <vsud-checkbox id="flexCheckDefault" v-model="termsAccepted">
+                Я принимаю
                 <a
                   href="javascript:;"
                   class="text-dark font-weight-bolder"
-                >Terms and Conditions</a>
+                >Условия использования</a>
               </vsud-checkbox>
 
               <div class="text-center">
-                <vsud-button color="dark" full-width variant="gradient" class="my-4 mb-2">Sign up</vsud-button>
+                <vsud-button color="dark" full-width variant="gradient" class="my-4 mb-2" type="submit">Зарегистрироваться</vsud-button>
               </div>
               <p class="text-sm mt-3 mb-0">
-                Already have an account?
-                <a
-                  href="javascript:;"
+                Уже есть аккаунт?
+                <router-link
+                  to="/sign-in"
                   class="text-dark font-weight-bolder"
-                >Sign in</a>
+                >Войти</router-link>
               </p>
             </form>
           </div>
@@ -136,6 +136,9 @@ import VsudInput from "@/components/VsudInput.vue";
 import VsudCheckbox from "@/components/VsudCheckbox.vue";
 import VsudButton from "@/components/VsudButton.vue";
 import bgImg from "@/assets/img/curved-images/curved6.jpg"
+import axios from "axios";
+import { useRouter } from "vue-router";
+
 export default {
   name: "SignUp",
   components: {
@@ -147,7 +150,47 @@ export default {
   },
   data() {
     return {
-      bgImg
+      bgImg,
+      login: "",
+      password: "",
+      termsAccepted: false,
+      errorMessage: ""
+    }
+  },
+  setup() {
+    const router = useRouter();
+    return { router };
+  },
+  methods: {
+    async handleRegister() {
+      if (!this.login || !this.password) {
+        this.errorMessage = "Пожалуйста, заполните все поля";
+        return;
+      }
+      
+      if (!this.termsAccepted) {
+        this.errorMessage = "Вы должны принять условия использования";
+        return;
+      }
+
+      try {
+        this.errorMessage = "";
+        const response = await axios.post("http://localhost:8000/register", {
+          login: this.login,
+          password: this.password,
+          role_id: 1,
+          department_id: 5,
+          access_id: 3
+        });
+        
+        console.log("Успешная регистрация:", response.data);
+        
+        // Перенаправляем на страницу входа
+        this.router.push("/sign-in");
+      } catch (error) {
+        console.error("Ошибка регистрации:", error);
+        this.errorMessage = error.response?.data?.detail || "Произошла ошибка при регистрации";
+      }
     }
   },
   created() {

@@ -10,9 +10,10 @@
         class="form-control"
         :class="getClasses(size, valid)"
         :name="name"
-        :value="value"
+        :value="modelValue"
         :placeholder="placeholder"
         :isRequired="isRequired"
+        @input="updateValue($event)"
       />
       <span v-if="iconDir === 'right'" class="input-group-text">
         <i :class="getIcon(icon)"></i>
@@ -25,6 +26,10 @@
 export default {
   name: "VsudInput",
   props: {
+    modelValue: {
+      type: String,
+      default: ""
+    },
     size: {
       type: String,
       default: "default",
@@ -75,6 +80,9 @@ export default {
     },
     getIcon: (icon) => (icon ? icon : null),
     hasIcon: (icon) => (icon ? "input-group" : null),
+    updateValue(event) {
+      this.$emit('update:modelValue', event.target.value);
+    }
   },
 };
 </script>

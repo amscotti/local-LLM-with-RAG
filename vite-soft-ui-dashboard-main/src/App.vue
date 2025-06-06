@@ -34,7 +34,8 @@ import Sidenav from "./examples/Sidenav/index.vue";
 import Configurator from "@/examples/Configurator.vue";
 import Navbar from "@/examples/Navbars/Navbar.vue";
 import AppFooter from "@/examples/Footer.vue";
-import { mapMutations } from "vuex";
+import { mapMutations, mapActions } from "vuex";
+
 export default {
   name: "App",
   components: {
@@ -58,8 +59,12 @@ export default {
   beforeMount() {
     this.$store.state.isTransparent = "bg-transparent";
   },
+  created() {
+    this.restoreAuthentication();
+  },
   methods: {
     ...mapMutations(["toggleConfigurator", "navbarMinimize"]),
+    ...mapActions(["restoreAuthentication"])
   },
 };
 </script>

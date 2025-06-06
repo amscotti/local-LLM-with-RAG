@@ -1,6 +1,13 @@
 <template>
   <div class="form-check">
-    <input :id="id" class="form-check-input" type="checkbox" :name="name" :checked="checked" />
+    <input 
+      :id="id" 
+      class="form-check-input" 
+      type="checkbox" 
+      :name="name" 
+      :checked="modelValue" 
+      @change="updateValue($event)"
+    />
     <label :for="id" class="custom-control-label">
       <slot />
     </label>
@@ -11,6 +18,10 @@
 export default {
   name: "VsudCheckbox",
   props: {
+    modelValue: {
+      type: Boolean,
+      default: false
+    },
     name: {
       type: String,
       default: ""
@@ -24,5 +35,10 @@ export default {
       default: ""
     },
   },
+  methods: {
+    updateValue(event) {
+      this.$emit('update:modelValue', event.target.checked);
+    }
+  }
 };
 </script>

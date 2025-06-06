@@ -18,33 +18,32 @@
             <div class="mx-auto col-xl-4 col-lg-5 col-md-6 d-flex flex-column">
               <div class="mt-8 card card-plain">
                 <div class="pb-0 card-header text-start">
-                  <h3 class="font-weight-bolder text-info text-gradient">Welcome back</h3>
-                  <p class="mb-0">Enter your email and password to sign in</p>
+                  <h3 class="font-weight-bolder text-info text-gradient">Добро пожаловать</h3>
+                  <p class="mb-0">Введите логин и пароль для входа</p>
                 </div>
                 <div class="card-body">
-                  <form role="form" class="text-start">
-                    <label>Email</label>
-                    <vsud-input type="email" placeholder="Email" name="email" />
-                    <label>Password</label>
-                    <vsud-input type="password" placeholder="Password" name="password" />
-                    <vsud-switch id="rememberMe" checked>Remember me</vsud-switch>
+                  <form role="form" class="text-start" @submit.prevent="handleLogin">
+                    <label>Логин</label>
+                    <vsud-input v-model="login" type="text" placeholder="Логин" name="login" />
+                    <label>Пароль</label>
+                    <vsud-input v-model="password" type="password" placeholder="Пароль" name="password" />
+                    <vsud-switch id="rememberMe" checked>Запомнить меня</vsud-switch>
                     <div class="text-center">
                       <vsud-button
                         class="my-4 mb-2"
                         variant="gradient"
                         color="info"
                         full-width
-                      >Sign in</vsud-button>
+                        type="submit"
+                      >Войти</vsud-button>
                     </div>
+                    <p v-if="errorMessage" class="text-danger text-center">{{ errorMessage }}</p>
                   </form>
                 </div>
-                <div class="px-1 pt-0 text-center card-footer px-lg-2">
-                  <p class="mx-auto mb-4 text-sm">
-                    Don't have an account?
-                    <a
-                      href="javascript:;"
-                      class="text-info text-gradient font-weight-bold"
-                    >Sign up</a>
+                <div class="text-center pt-0 px-lg-2 px-1">
+                  <p class="mb-4 text-sm mx-auto">
+                    Нет аккаунта?
+                    <router-link to="/sign-up" class="text-info text-gradient font-weight-bold">Зарегистрироваться</router-link>
                   </p>
                 </div>
               </div>
@@ -74,11 +73,13 @@ import AppFooter from "@/examples/PageLayout/Footer.vue";
 import VsudInput from "@/components/VsudInput.vue";
 import VsudSwitch from "@/components/VsudSwitch.vue";
 import VsudButton from "@/components/VsudButton.vue";
+import axios from "axios";
+import { useRouter } from "vue-router";
 import bgImg from "@/assets/img/curved-images/curved9.jpg"
 const body = document.getElementsByTagName("body")[0];
 
 export default {
-  name: "SigninPage",
+  name: "SignIn",
   components: {
     Navbar,
     AppFooter,
@@ -88,10 +89,50 @@ export default {
   },
   data() {
     return {
+      login: "",
+      password: "",
+      errorMessage: "",
       bgImg
+    };
+  },
+  setup() {
+    const router = useRouter();
+    return { router };
+  },
+  methods: {
+    async handleLogin() {
+      if (!this.login || !this.password) {
+        this.errorMessage = "Пожалуйста, заполните все поля";
+        return;
+      }
+      try {
+        this.errorMessage = "";
+        console.log("Логин перед отправкой:", this.login);
+        console.log("Пароль перед отправкой:", this.password);
+        const response = await axios.post("http://localhost:8000/login", {
+          login: this.login,
+          password: this.password
+        }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log("Успешная авторизация:", response.data);
+        
+        // Сохраняем информацию о входе пользователя
+        localStorage.setItem("isAuthenticated", "true");
+        localStorage.setItem("userLogin", this.login);
+        
+        // Перенаправляем на панель управления
+        this.router.push("/dashboard");
+      } catch (error) {
+        console.error("Ошибка авторизации:", error);
+        this.errorMessage = error.response?.data?.detail || "Произошла ошибка при авторизации";
+      }
     }
   },
-  beforeMount() {
+  created() {
     this.$store.state.hideConfigButton = true;
     this.$store.state.showNavbar = false;
     this.$store.state.showSidenav = false;
