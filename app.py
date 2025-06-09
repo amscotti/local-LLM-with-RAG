@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 
-from models_db import User, Department, Access
+from models_db import User, Department, Access, Content
 from document_loader import load_documents_into_database, vec_search
 import argparse
 import sys
@@ -341,8 +341,50 @@ async def get_user(id: int, db: Session = Depends(get_db)):
         "access_name": access_name,
     }
 
+@app.post("/upload-content")
+async def upload_content(title: str, description: str, access_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    # Сохранение файла на сервере
+    file_location = f"content_files/{file.filename}"
+    with open(file_location, "wb") as f:
+        f.write(await file.read())
 
+    # Проверка существования уровня доступа
+    access = db.query(Access).filter(Access.id == access_id).first()
+    if access is None:
+        raise HTTPException(status_code=400, detail="Уровень доступа не найден")
 
+    # Создание записи в базе данных
+    new_content = Content(
+        title=title,
+        description=description,
+        file_path=file_location,
+        access_level=access_id  
+    )
+    db.add(new_content)
+    db.commit()
+    db.refresh(new_content)
+
+    return {"message": "Контент успешно загружен", "content_id": new_content.id}
+
+@app.get("/content/{content_id}")
+async def get_content(content_id: int, user_id: int, db: Session = Depends(get_db)):
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if content is None:
+        raise HTTPException(status_code=404, detail="Контент не найден")
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if user.access_id < content.access_level:
+        raise HTTPException(status_code=403, detail="Недостаточно прав для доступа к этому контенту")
+
+    access = db.query(Access).filter(Access.id == content.access_level).first()
+    access_name = access.access_name if access else "Неизвестный доступ"
+
+    return {
+        "title": content.title,
+        "description": content.description,
+        "file_path": content.file_path,
+        "access_level": access_name
+    }
 
 if __name__ == "__main__":
     args = parse_arguments()
