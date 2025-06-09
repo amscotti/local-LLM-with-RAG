@@ -7,6 +7,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
+import secrets
+from typing import List
 
 from models_db import User, Department, Access, Content
 from document_loader import load_documents_into_database, vec_search
@@ -299,18 +301,28 @@ class UserLogin(BaseModel):
     login: str
     password: str
 
+def generate_auth_key() -> str:
+    """Генерация случайного ключа аутентификации."""
+    return secrets.token_hex(16)
+
 @app.post("/login")
-async def login(user: UserLogin, db: Session = Depends(get_db)):
-    # Отладочное сообщение для проверки входящих данных
-    print("Полученные данные для входа:", user)
-
-    db_user = db.query(User).filter(User.login == user.login).first()
-    if not db_user or not pwd_context.verify(user.password, db_user.password):
-        raise HTTPException(status_code=400, detail="Неверный логин или пароль")
-    print("Полученные данные для входа:", user)
-
-    return {"message": "Успешная авторизация"}
-    print("Полученные данные для входа:", user)
+async def login(user_data: UserLogin, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.login == user_data.login).first()
+    if not user or not user.check_password(user_data.password):
+        raise HTTPException(status_code=401, detail="Неверный логин или пароль")
+    
+    auth_key = generate_auth_key()
+    user.auth_key = auth_key
+    db.commit()
+    
+    return {
+        "id": user.id,
+        "login": user.login,
+        "auth_key": auth_key,
+        "role_id": user.role_id,
+        "department_id": user.department_id,
+        "access_id": user.access_id
+    }
 
 app.add_middleware(
     CORSMiddleware,
@@ -320,6 +332,68 @@ app.add_middleware(
     allow_headers=["*"],  # Разрешить все заголовки
 )
 
+@app.post("/upload-content")
+async def upload_content(title: str, description: str, access_id: int, department_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    # Сохранение файла на сервере
+    file_location = f"content_files/{file.filename}"
+    with open(file_location, "wb") as f:
+        f.write(await file.read())
+
+    # Проверка существования уровня доступа
+    access = db.query(Access).filter(Access.id == access_id).first()
+    if access is None:
+        raise HTTPException(status_code=400, detail="Уровень доступа не найден")
+
+    # Создание записи в базе данных
+    new_content = Content(
+        title=title,
+        description=description,
+        file_path=file_location,
+        access_level=access_id,
+        department_id=department_id
+    )
+    db.add(new_content)
+    db.commit()
+    db.refresh(new_content)
+
+    return {"message": "Контент успешно загружен"}
+
+
+
+
+
+class ContentBase(BaseModel):
+    id: int
+    title: str
+    description: str
+    file_path: str
+
+    class Config:
+        orm_mode = True
+
+@app.get("/content/filter", response_model=List[ContentBase])
+async def get_content_by_access_and_department(access_level: int, department_id: int, db: Session = Depends(get_db)):
+    try:
+        # Получаем контент из базы данных по access_level и department_id
+        contents = db.query(Content).filter(
+            Content.access_level == access_level,
+            Content.department_id == department_id
+        ).all()
+
+        if not contents:
+            raise HTTPException(status_code=404, detail="Контент не найден")
+
+        return [
+            ContentBase(
+                id=content.id,
+                title=content.title,
+                description=content.description,
+                file_path=content.file_path
+            ) for content in contents
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
+    
 @app.get("/user/{id}")
 async def get_user(id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == id).first()
@@ -341,50 +415,37 @@ async def get_user(id: int, db: Session = Depends(get_db)):
         "access_name": access_name,
     }
 
-@app.post("/upload-content")
-async def upload_content(title: str, description: str, access_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    # Сохранение файла на сервере
-    file_location = f"content_files/{file.filename}"
-    with open(file_location, "wb") as f:
-        f.write(await file.read())
+@app.get("/user/{user_id}/content", response_model=List[ContentBase])
+async def get_user_content(user_id: int, db: Session = Depends(get_db)):
+    try:
+        # Получаем пользователя по user_id
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    # Проверка существования уровня доступа
-    access = db.query(Access).filter(Access.id == access_id).first()
-    if access is None:
-        raise HTTPException(status_code=400, detail="Уровень доступа не найден")
+        # Получаем контент из базы данных по access_level и department_id пользователя
+        contents = db.query(Content).filter(
+            Content.access_level == user.access_id,
+            Content.department_id == user.department_id
+        ).all()
 
-    # Создание записи в базе данных
-    new_content = Content(
-        title=title,
-        description=description,
-        file_path=file_location,
-        access_level=access_id  
-    )
-    db.add(new_content)
-    db.commit()
-    db.refresh(new_content)
+        print(f"Access Level: {user.access_id}, Department ID: {user.department_id}")  # Отладочное сообщение
+        print(f"Found contents: {len(contents)}")  # Количество найденного контента
 
-    return {"message": "Контент успешно загружен", "content_id": new_content.id}
+        if not contents:
+            raise HTTPException(status_code=404, detail="Контент не найден")
 
-@app.get("/content/{content_id}")
-async def get_content(content_id: int, user_id: int, db: Session = Depends(get_db)):
-    content = db.query(Content).filter(Content.id == content_id).first()
-    if content is None:
-        raise HTTPException(status_code=404, detail="Контент не найден")
+        return [
+            ContentBase(
+                id=content.id,
+                title=content.title,
+                description=content.description,
+                file_path=content.file_path
+            ) for content in contents
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
-    user = db.query(User).filter(User.id == user_id).first()
-    if user.access_id < content.access_level:
-        raise HTTPException(status_code=403, detail="Недостаточно прав для доступа к этому контенту")
-
-    access = db.query(Access).filter(Access.id == content.access_level).first()
-    access_name = access.access_name if access else "Неизвестный доступ"
-
-    return {
-        "title": content.title,
-        "description": content.description,
-        "file_path": content.file_path,
-        "access_level": access_name
-    }
 
 if __name__ == "__main__":
     args = parse_arguments()

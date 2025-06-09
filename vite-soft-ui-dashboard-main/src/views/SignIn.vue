@@ -123,6 +123,7 @@ export default {
         // Сохраняем информацию о входе пользователя
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("userLogin", this.login);
+        localStorage.setItem("userId", response.data.id);
         
         // Перенаправляем на панель управления
         this.router.push("/dashboard");
