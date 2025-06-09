@@ -19,7 +19,7 @@
         </sidenav-collapse>
       </li>
       <li class="nav-item">
-        <sidenav-collapse nav-text="Счета" :to="{ name: 'Billing' }">
+        <sidenav-collapse nav-text="Чат" :to="{ name: 'Billing' }">
           <template #icon>
             <icon name="billing" />
           </template>
