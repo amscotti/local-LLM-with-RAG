@@ -6,6 +6,13 @@
       </div>
     </div>
     
+    <!-- Таблица контента -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <content-table ref="contentTable" />
+      </div>
+    </div>
+    
     <!-- Админ-панель -->
     <div class="row mt-4">
       <div class="col-12">
@@ -117,25 +124,19 @@
         </div>
       </div>
     </div>
-    
-    <div class="row">
-      <div class="col-12">
-        <projects-table />
-      </div>
-    </div>
   </div>
 </template>
 
 <script>
 import AuthorsTable from "./components/AuthorsTable.vue";
-import ProjectsTable from "./components/ProjectsTable.vue";
+import ContentTable from "./components/ContentTable.vue";
 import axios from 'axios';
 
 export default {
   name: "TablesPage",
   components: {
     AuthorsTable,
-    ProjectsTable,
+    ContentTable,
   },
   data() {
     return {
@@ -278,6 +279,12 @@ export default {
         
         // Сбрасываем поле загрузки файла
         document.getElementById('file').value = '';
+        
+        // Обновляем таблицу контента
+        const contentTableRef = this.$refs.contentTable;
+        if (contentTableRef && typeof contentTableRef.fetchAllContent === 'function') {
+          contentTableRef.fetchAllContent();
+        }
         
       } catch (error) {
         this.uploadMessage = error.response?.data?.detail || 'Ошибка при загрузке контента';
