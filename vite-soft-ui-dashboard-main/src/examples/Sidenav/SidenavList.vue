@@ -5,21 +5,21 @@
   >
     <ul class="navbar-nav">
       <li class="nav-item">
-        <sidenav-collapse nav-text="Dashboard" :to="{ name: 'Dashboard' }">
+        <sidenav-collapse nav-text="Главная" :to="{ name: 'Dashboard' }">
           <template #icon>
             <icon name="dashboard" />
           </template>
         </sidenav-collapse>
       </li>
       <li class="nav-item">
-        <sidenav-collapse nav-text="Tables" :to="{ name: 'Tables' }">
+        <sidenav-collapse nav-text="Админская панель" :to="{ name: 'Tables' }">
           <template #icon>
             <icon name="tables" />
           </template>
         </sidenav-collapse>
       </li>
       <li class="nav-item">
-        <sidenav-collapse nav-text="Billing" :to="{ name: 'Billing' }">
+        <sidenav-collapse nav-text="Счета" :to="{ name: 'Billing' }">
           <template #icon>
             <icon name="billing" />
           </template>
@@ -27,14 +27,14 @@
       </li>
 
       <li class="nav-item">
-        <sidenav-collapse nav-text="Virtual Reality" :to="{ name: 'Virtual Reality' }">
+        <sidenav-collapse nav-text="Виртуальная реальность" :to="{ name: 'Virtual Reality' }">
           <template #icon>
             <icon name="virtual-reality" />
           </template>
         </sidenav-collapse>
       </li>
       <li class="nav-item">
-        <sidenav-collapse nav-text="RTL" :to="{ name: 'Rtl' }">
+        <sidenav-collapse nav-text="Правый интерфейс" :to="{ name: 'Rtl' }">
           <template #icon>
             <icon name="rtl-page" />
           </template>
@@ -44,24 +44,24 @@
         <h6
           class="text-xs ps-4 text-uppercase font-weight-bolder opacity-6"
           :class="$store.state.isRTL ? 'me-4' : 'ms-2'"
-        >PAGES</h6>
+        >СТРАНИЦЫ</h6>
       </li>
       <li class="nav-item">
-        <sidenav-collapse nav-text="Profile" :to="{ name: 'Profile' }">
+        <sidenav-collapse nav-text="Профиль" :to="{ name: 'Profile' }">
           <template #icon>
             <icon name="customer-support" />
           </template>
         </sidenav-collapse>
       </li>
       <li class="nav-item">
-        <sidenav-collapse nav-text="Sign In" :to="{ name: 'Sign In' }">
+        <sidenav-collapse nav-text="Вход" :to="{ name: 'Sign In' }">
           <template #icon>
             <icon name="sign-in" />
           </template>
         </sidenav-collapse>
       </li>
       <li class="nav-item">
-        <sidenav-collapse nav-text="Sign Up" :to="{ name: 'Sign Up' }">
+        <sidenav-collapse nav-text="Регистрация" :to="{ name: 'Sign Up' }">
           <template #icon>
             <icon name="sign-up" />
           </template>
@@ -82,17 +82,17 @@
   <div class="pt-3 mx-3 mt-3 sidenav-footer">
     <sidenav-card
       :class="cardBg"
-      text-primary="Need Help?"
-      text-secondary="Please check our docs"
+      text-primary="Нужна помощь?"
+      text-secondary="Проверьте нашу документацию"
       href="https://www.creative-tim.com/learning-lab/vue/overview/soft-ui-dashboard/"
-      link-text="Documentation"
+      link-text="Документация"
       icon-class="ni ni-diamond"
     />
     <a
       class="btn bg-gradient-success mt-4 w-100"
       href="https://www.creative-tim.com/product/vue-soft-ui-dashboard-pro?ref=vsud"
       type="button"
-    >Upgrade to pro</a>
+    >Версия Про</a>
   </div>
 </template>
 <script>
