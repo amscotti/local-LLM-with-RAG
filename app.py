@@ -462,6 +462,33 @@ async def download_file(content_id: int, db: Session = Depends(get_db)):
     # Возвращаем файл как ответ
     return FileResponse(file_path, media_type='application/octet-stream', filename=os.path.basename(file_path))
 
+@app.get("/users")
+async def get_users(db: Session = Depends(get_db)):
+    try:
+        users = db.query(User).all()  # Получаем всех пользователей из базы данных
+        user_list = []
+        
+        for user in users:
+            # Получаем название отдела
+            department = db.query(Department).filter(Department.id == user.department_id).first()
+            department_name = department.department_name if department else "Неизвестный отдел"
+
+            # Получаем название доступа
+            access = db.query(Access).filter(Access.id == user.access_id).first()
+            access_name = access.access_name if access else "Неизвестный доступ"
+
+            user_list.append({
+                "id": user.id,
+                "login": user.login,
+                "role_id": user.role_id,
+                "department_name": department_name,
+                "access_name": access_name,
+            })
+
+        return user_list
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении пользователей: {str(e)}")
+
 if __name__ == "__main__":
     args = parse_arguments()
     main(args.model, args.embedding_model, args.path, args.web, args.port)
