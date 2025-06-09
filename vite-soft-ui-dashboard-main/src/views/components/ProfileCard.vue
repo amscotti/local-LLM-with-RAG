@@ -3,7 +3,7 @@
     <div class="p-3 pb-0 card-header">
       <div class="row">
         <div class="col-md-8 d-flex align-items-center">
-          <h6 class="mb-0">Информация о пользователе</h6>
+          <h6 class="mb-0">Информация о пользователе(Надо будет подумать)</h6>
         </div>
       </div>
     </div>

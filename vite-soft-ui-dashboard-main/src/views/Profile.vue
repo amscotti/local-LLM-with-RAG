@@ -40,7 +40,85 @@
   </div>
   <div class="py-4 container-fluid">
     <div class="mt-3 row">
-      
+      <div class="col-12 col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="p-3 pb-0 card-header">
+            <h6 class="mb-0">Platform Settings(Возможно надо будет убрать)</h6>
+          </div>
+          <div class="p-3 card-body">
+            <h6 class="text-xs text-uppercase text-body font-weight-bolder">
+              Account
+            </h6>
+            <ul class="list-group">
+              <li class="px-0 border-0 list-group-item">
+                <vsud-switch
+                  id="flexSwitchCheckDefault"
+                  class="ps-0"
+                  label-class="mb-0 text-body ms-3 text-truncate w-80"
+                  input-class="ms-auto"
+                  checked
+                  >Email me when someone follows me</vsud-switch
+                >
+              </li>
+              <li class="px-0 border-0 list-group-item">
+                <vsud-switch
+                  id="flexSwitchCheckDefault1"
+                  class="ps-0"
+                  label-class="mb-0 text-body ms-3 text-truncate w-80"
+                  input-class="ms-auto"
+                  >Email me when someone answers on my post</vsud-switch
+                >
+              </li>
+
+              <li class="px-0 border-0 list-group-item">
+                <vsud-switch
+                  id="flexSwitchCheckDefault2"
+                  class="ps-0"
+                  label-class="mb-0 text-body ms-3 text-truncate w-80"
+                  input-class="ms-auto"
+                  checked
+                  >Email me when someone mentions me</vsud-switch
+                >
+              </li>
+            </ul>
+            <h6
+              class="mt-4 text-xs text-uppercase text-body font-weight-bolder"
+            >
+              Application
+            </h6>
+            <ul class="list-group">
+              <li class="px-0 border-0 list-group-item">
+                <vsud-switch
+                  id="flexSwitchCheckDefault3"
+                  class="ps-0"
+                  label-class="mb-0 text-body ms-3 text-truncate w-80"
+                  input-class="ms-auto"
+                  >New launches and projects</vsud-switch
+                >
+              </li>
+              <li class="px-0 border-0 list-group-item">
+                <vsud-switch
+                  id="flexSwitchCheckDefault4"
+                  class="ps-0"
+                  label-class="mb-0 text-body ms-3 text-truncate w-80"
+                  input-class="ms-auto"
+                  checked
+                  >Monthly product updates</vsud-switch
+                >
+              </li>
+              <li class="px-0 pb-0 border-0 list-group-item">
+                <vsud-switch
+                  id="flexSwitchCheckDefault5"
+                  class="ps-0"
+                  label-class="mb-0 text-body ms-3 text-truncate w-80"
+                  input-class="ms-auto"
+                  >Subscribe to newsletter</vsud-switch
+                >
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
       <div class="mt-4 col-12 col-md-6 col-xl-4 mt-md-0">
         <profile-card />
       </div>
