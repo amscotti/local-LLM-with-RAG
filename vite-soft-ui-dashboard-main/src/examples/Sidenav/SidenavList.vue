@@ -80,19 +80,8 @@
     </ul>
   </div>
   <div class="pt-3 mx-3 mt-3 sidenav-footer">
-    <sidenav-card
-      :class="cardBg"
-      text-primary="Нужна помощь?"
-      text-secondary="Проверьте нашу документацию"
-      href="https://www.creative-tim.com/learning-lab/vue/overview/soft-ui-dashboard/"
-      link-text="Документация"
-      icon-class="ni ni-diamond"
-    />
-    <a
-      class="btn bg-gradient-success mt-4 w-100"
-      href="https://www.creative-tim.com/product/vue-soft-ui-dashboard-pro?ref=vsud"
-      type="button"
-    >Версия Про</a>
+   
+
   </div>
 </template>
 <script>
