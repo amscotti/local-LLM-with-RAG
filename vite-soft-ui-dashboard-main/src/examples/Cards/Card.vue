@@ -8,7 +8,7 @@
             <h5 class="mb-0 font-weight-bolder" :class="valueColor">
               {{ content.description }}
             </h5>
-            <span class="text-sm font-weight-bolder" :class="percentageColor">{{ content.file_path }}</span>
+            <span class="text-sm font-weight-bolder" :class="percentageColor" @click="openDocument">{{ content.file_path }}</span>
           </div>
         </div>
       </div>
@@ -114,6 +114,15 @@ export default {
         console.log('Updated content:', this.content);
       } catch (error) {
         console.error('Ошибка при получении контента:', error);
+      }
+    },
+    openDocument() {
+      const documentUrl = this.content.file_path; // Предполагаем, что file_path содержит URL документа
+      console.log('Opening document URL:', documentUrl); // Логируем URL
+      if (documentUrl) {
+        window.open(documentUrl, '_blank'); // Открывает документ в новой вкладке
+      } else {
+        console.error('Document URL is not valid:', documentUrl); // Логируем ошибку, если URL не валиден
       }
     }
   }

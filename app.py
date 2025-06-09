@@ -9,6 +9,7 @@ from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 import secrets
 from typing import List
+from fastapi.responses import FileResponse
 
 from models_db import User, Department, Access, Content
 from document_loader import load_documents_into_database, vec_search
@@ -446,6 +447,20 @@ async def get_user_content(user_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
+@app.get("/download-file/{content_id}")
+async def download_file(content_id: int, db: Session = Depends(get_db)):
+    # Получаем контент из базы данных по ID
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if content is None:
+        raise HTTPException(status_code=404, detail="Контент не найден")
+
+    # Проверяем, существует ли файл
+    file_path = content.file_path
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Файл не найден")
+
+    # Возвращаем файл как ответ
+    return FileResponse(file_path, media_type='application/octet-stream', filename=os.path.basename(file_path))
 
 if __name__ == "__main__":
     args = parse_arguments()
