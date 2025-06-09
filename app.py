@@ -19,6 +19,39 @@ from database import get_db
 
 from llm import getChatChain
 
+# Функция для проверки доступности модели
+def check_if_model_is_available(model_name: str):
+    # Список доступных моделей, можно расширить по необходимости
+    available_models = [
+        "ilyagusev/saiga_llama3:latest", 
+        "snowflake-arctic-embed2:latest", 
+
+    ]
+    
+    # Проверка доступности модели
+    if model_name not in available_models:
+        raise ValueError(f"Модель '{model_name}' недоступна. Доступные модели: {', '.join(available_models)}")
+    
+    return True
+
+# Функция для получения списка доступных моделей
+def get_available_models():
+    # Список моделей LLM
+    llm_models = [
+        "ilyagusev/saiga_llama3:latest", 
+
+    ]
+    
+    # Список моделей эмбеддингов
+    embedding_models = [
+        "snowflake-arctic-embed2:latest", 
+    ]
+    
+    return {
+        "llm_models": llm_models,
+        "embedding_models": embedding_models
+    }
+
 # Инициализация глобальных переменных
 app = FastAPI()
 chat = None
@@ -135,6 +168,24 @@ async def parse_args():
         "web": args.web,
         "port": args.port
     }
+
+# Эндпоинт для получения всех доступных моделей
+@app.get("/models")
+async def get_models():
+    models = get_available_models()
+    return models
+
+# Эндпоинт для получения доступных моделей LLM
+@app.get("/models/llm")
+async def get_llm_models():
+    models = get_available_models()
+    return {"models": models["llm_models"]}
+
+# Эндпоинт для получения доступных моделей эмбеддингов
+@app.get("/models/embedding")
+async def get_embedding_models():
+    models = get_available_models()
+    return {"models": models["embedding_models"]}
 
 # Эндпоинт для загрузки файлов
 @app.post("/upload-file")

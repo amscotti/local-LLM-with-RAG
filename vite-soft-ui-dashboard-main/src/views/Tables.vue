@@ -28,6 +28,9 @@
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" aria-controls="upload" aria-selected="false">Загрузка контента</button>
               </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="initialize-tab" data-bs-toggle="tab" data-bs-target="#initialize" type="button" role="tab" aria-controls="initialize" aria-selected="false">Инициализация LLM</button>
+              </li>
             </ul>
             
             <div class="tab-content mt-3" id="adminTabsContent">
@@ -119,6 +122,46 @@
                   </div>
                 </form>
               </div>
+              
+              <!-- Вкладка инициализации LLM -->
+              <div class="tab-pane fade" id="initialize" role="tabpanel" aria-labelledby="initialize-tab">
+                <form @submit.prevent="initializeLLM">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="model-name" class="form-label">Модель LLM</label>
+                      <input type="text" class="form-control" id="model-name" v-model="initializeForm.model_name" required placeholder="Введите модель LLM">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="embedding-model" class="form-label">Модель эмбеддингов</label>
+                      <input type="text" class="form-control" id="embedding-model" v-model="initializeForm.embedding_model_name" required placeholder="Введите модель эмбеддингов">
+      </div>
+    </div>
+    <div class="row">
+                    <div class="col-12 mb-3">
+                      <label for="documents-path" class="form-label">Путь к документам</label>
+                      <input type="text" class="form-control" id="documents-path" v-model="initializeForm.documents_path" placeholder="Например: Research" required>
+                      <small class="text-muted">Укажите путь к директории с документами для индексации</small>
+                    </div>
+                  </div>
+                  <div class="row mb-3">
+      <div class="col-12">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="confirm-init" v-model="initializeForm.confirm">
+                        <label class="form-check-label" for="confirm-init">
+                          Я подтверждаю, что хочу инициализировать LLM. Это может занять некоторое время.
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <button type="submit" class="btn bg-gradient-success" :disabled="!initializeForm.confirm || isInitializing">
+                    <span v-if="isInitializing" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    {{ isInitializing ? 'Инициализация...' : 'Инициализировать LLM' }}
+                  </button>
+                  <div v-if="initializeMessage" :class="['alert', initializeStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
+                    {{ initializeMessage }}
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>
@@ -162,14 +205,29 @@ export default {
       uploadMessage: '',
       uploadStatus: false,
       
+      // Форма инициализации LLM
+      initializeForm: {
+        model_name: '',
+        embedding_model_name: '',
+        documents_path: 'Research',
+        confirm: false
+      },
+      initializeMessage: '',
+      initializeStatus: false,
+      isInitializing: false,
+      
       // Списки для выпадающих меню
       departments: [],
-      accessLevels: []
+      accessLevels: [],
+      llmModels: [],
+      embeddingModels: []
     };
   },
   async created() {
     await this.fetchDepartments();
     await this.fetchAccessLevels();
+    await this.fetchLLMModels();
+    await this.fetchEmbeddingModels();
   },
   methods: {
     // Получение списка отделов
@@ -201,6 +259,58 @@ export default {
         ];
       } catch (error) {
         console.error('Ошибка при получении уровней доступа:', error);
+      }
+    },
+    
+    // Получение списка моделей LLM
+    async fetchLLMModels() {
+      try {
+        const response = await axios.get('http://localhost:8000/models/llm');
+        if (response.data && response.data.models) {
+          this.llmModels = response.data.models;
+        } else {
+          // Fallback на дефолтные значения, если API не вернул моделей
+          this.llmModels = [
+            'mistral',
+            'llama3',
+            'ilyagusev/saiga_llama3:latest',
+            'gemma'
+          ];
+        }
+      } catch (error) {
+        console.error('Ошибка при получении моделей LLM:', error);
+        // Fallback на дефолтные значения в случае ошибки
+        this.llmModels = [
+          'snowflake-arctic-embed2:latest ',
+          'llama3',
+          'ilyagusev/saiga_llama3',
+          'gemma'
+        ];
+      }
+    },
+    
+    // Получение списка моделей эмбеддингов
+    async fetchEmbeddingModels() {
+      try {
+        const response = await axios.get('http://localhost:8000/models/embedding');
+        if (response.data && response.data.models) {
+          this.embeddingModels = response.data.models;
+        } else {
+          // Fallback на дефолтные значения, если API не вернул моделей
+          this.embeddingModels = [
+            'snowflake-arctic-embed2:latest ',
+            'mxbai-embed-large',
+            'all-minilm'
+          ];
+        }
+      } catch (error) {
+        console.error('Ошибка при получении моделей эмбеддингов:', error);
+        // Fallback на дефолтные значения в случае ошибки
+        this.embeddingModels = [
+          'snowflake-arctic-embed2:latest',
+          'mxbai-embed-large',
+          'all-minilm'
+        ];
       }
     },
     
@@ -290,6 +400,39 @@ export default {
         this.uploadMessage = error.response?.data?.detail || 'Ошибка при загрузке контента';
         this.uploadStatus = false;
         console.error('Ошибка загрузки контента:', error);
+      }
+    },
+    
+    // Инициализация LLM
+    async initializeLLM() {
+      if (!this.initializeForm.confirm) {
+        this.initializeMessage = 'Пожалуйста, подтвердите инициализацию';
+        this.initializeStatus = false;
+        return;
+      }
+      
+      this.isInitializing = true;
+      this.initializeMessage = 'Идет инициализация LLM, это может занять некоторое время...';
+      this.initializeStatus = true;
+      
+      try {
+        const response = await axios.post('http://localhost:8000/initialize', {
+          model_name: this.initializeForm.model_name,
+          embedding_model_name: this.initializeForm.embedding_model_name,
+          documents_path: this.initializeForm.documents_path
+        });
+        
+        this.initializeMessage = 'LLM успешно инициализирован!';
+        this.initializeStatus = true;
+        
+        // Сбрасываем подтверждение
+        this.initializeForm.confirm = false;
+      } catch (error) {
+        this.initializeMessage = error.response?.data?.detail || 'Ошибка при инициализации LLM';
+        this.initializeStatus = false;
+        console.error('Ошибка инициализации LLM:', error);
+      } finally {
+        this.isInitializing = false;
       }
     }
   }
