@@ -136,3 +136,4 @@ cython_debug/
 .DS_Store
 storage
 Research
+content_files
