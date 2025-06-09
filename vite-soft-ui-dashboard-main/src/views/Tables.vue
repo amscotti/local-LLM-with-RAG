@@ -133,8 +133,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label for="embedding-model" class="form-label">Модель эмбеддингов</label>
-                      <input type="text" class="form-control" id="embedding-model" v-model="initializeForm.embedding_model_name" required placeholder="Введите модель эмбеддингов">
-      </div>
+                      <input type="text" class="form-control" id="embedding-model" v-model="initializeForm.embedding_model_name" required placeholder="Введите модель эмбеддингов"></div>
     </div>
     <div class="row">
                     <div class="col-12 mb-3">
@@ -416,10 +415,22 @@ export default {
       this.initializeStatus = true;
       
       try {
+        // Удаляем лишние пробелы из значений
+        const modelName = this.initializeForm.model_name.trim();
+        const embeddingModelName = this.initializeForm.embedding_model_name.trim();
+        const documentsPath = this.initializeForm.documents_path.trim();
+        
+        // Отладочная информация: выводим параметры, которые отправляем
+        console.log('Отправляемые параметры:', {
+          model_name: modelName,
+          embedding_model_name: embeddingModelName,
+          documents_path: documentsPath
+        });
+        
         const response = await axios.post('http://localhost:8000/initialize', {
-          model_name: this.initializeForm.model_name,
-          embedding_model_name: this.initializeForm.embedding_model_name,
-          documents_path: this.initializeForm.documents_path
+          model_name: modelName,
+          embedding_model_name: embeddingModelName,
+          documents_path: documentsPath
         });
         
         this.initializeMessage = 'LLM успешно инициализирован!';
