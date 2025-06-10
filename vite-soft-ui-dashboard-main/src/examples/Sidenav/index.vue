@@ -12,8 +12,8 @@
         aria-hidden="true"
       ></i>
       <a class="m-0 navbar-brand" href="/">
-        <img :src="logo" class="navbar-brand-img h-100" alt="main_logo" />
-        <span class="ms-1 font-weight-bold">Vite Soft UI Dashboard</span>
+        <!-- <img :src="logo" class="navbar-brand-img h-100" alt="main_logo" /> -->
+        <span class="ms-1 font-weight-bold">НПО "СПЕКТРОН"</span>
       </a>
     </div>
     <hr class="mt-0 horizontal dark" />

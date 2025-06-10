@@ -3,7 +3,7 @@
   <footer class="py-5 footer">
     <div class="container">
       <div class="row">
-        <div class="mx-auto mb-4 text-center col-lg-8">
+        <!-- <div class="mx-auto mb-4 text-center col-lg-8">
           <a
             href="javascript:;"
             target="_blank"
@@ -46,8 +46,8 @@
           >
             Pricing
           </a>
-        </div>
-        <div class="mx-auto mt-2 mb-4 text-center col-lg-8">
+        </div> -->
+        <!-- <div class="mx-auto mt-2 mb-4 text-center col-lg-8">
           <a
             href="javascript:;"
             target="_blank"
@@ -83,12 +83,12 @@
           >
             <span class="text-lg fab fa-github"></span>
           </a>
-        </div>
+        </div> -->
       </div>
       <div class="row">
         <div class="mx-auto mt-1 text-center col-8">
           <p class="mb-0 text-secondary">
-            Copyright © {{ new Date().getFullYear() }} Soft by Creative Tim.
+            Copyright © {{ new Date().getFullYear() }} Soft by Creative Tim. НПО "СПЕКТРОН" Отдел ИИ
           </p>
         </div>
       </div>

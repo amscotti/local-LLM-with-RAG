@@ -93,7 +93,7 @@ export default {
   methods: {
     async fetchContent() {
       try {
-        const response = await axios.get(`http://localhost:8000/user/${this.userId}/content`);
+        const response = await axios.get(`http://192.168.81.149:8000/user/${this.userId}/content`);
         console.log('Response data:', response.data);
         
         // Проверяем, является ли response.data массивом
@@ -128,8 +128,9 @@ export default {
         console.error('Document URL is not valid:', documentUrl); // Логируем ошибку, если URL не валиден
       }
     },
+    // http://192.168.81.149:8000 
     getDownloadLink(contentId) {
-      return `http://localhost:8000/download-file/${contentId}`;
+      return `http://192.168.81.149:8000/download-file/${contentId}`;
     }
   }
 };
