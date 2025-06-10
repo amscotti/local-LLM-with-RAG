@@ -1,14 +1,13 @@
+
 <template>
-  <div class="mb-4 card">
+  <div class="m-1 card">
     <div class="p-3 card-body">
       <div class="d-flex align-items-center" :class="directionReverse ? reverseDirection : ''">
         <div class="flex-grow-1">
           <div class="numbers">
             <p class="mb-0 text-sm text-capitalize font-weight-bold" :class="titleColor">{{ content.title }}</p>
-            <h5 class="mb-0 font-weight-bolder" :class="valueColor">
-              {{ content.description }}
-            </h5>
-            <span class="text-sm font-weight-bolder" :class="percentageColor" @click="openDocument">{{ content.file_path }}</span>
+            <p class="mb-0 font-weight-bolder" :class="valueColor">{{ content.description }}</p>
+            <a :href="getDownloadLink(contentId)" class="text-secondary font-weight-bold text-sm" data-toggle="tooltip" data-original-title="Скачать файл">Скачать</a>
           </div>
         </div>
       </div>
@@ -52,6 +51,10 @@ export default {
       default: ""
     },
     userId: { // Убедитесь, что передаете ID пользователя
+      type: Number,
+      required: true
+    },
+    contentId: {
       type: Number,
       required: true
     }
@@ -124,6 +127,9 @@ export default {
       } else {
         console.error('Document URL is not valid:', documentUrl); // Логируем ошибку, если URL не валиден
       }
+    },
+    getDownloadLink(contentId) {
+      return `http://localhost:8000/download-file/${contentId}`;
     }
   }
 };
@@ -138,7 +144,5 @@ export default {
 .card-body {
   padding: 20px;
 }
-.numbers {
-  margin-top: 10px;
-}
+
 </style>
