@@ -28,10 +28,10 @@
                 <p class="text-xs text-secondary mb-0">{{ content.description }}</p>
               </td>
               <td class="align-middle text-center text-sm">
-                <p class="text-xs font-weight-bold mb-0">{{ getDepartmentName(content.department_id) }}</p>
+                <p class="text-xs font-weight-bold mb-0">{{ content.department_name }}</p>
               </td>
               <td class="align-middle text-center">
-                <span class="text-secondary text-xs font-weight-bold">{{ getAccessName(content.access_level) }}</span>
+                <span class="text-secondary text-xs font-weight-bold">{{ content.access_name }}</span>
               </td>
               <td class="align-middle text-center">
                 <a
@@ -61,27 +61,18 @@ export default {
   name: "ContentTable",
   data() {
     return {
-      contents: [],
-      departments: [],
-      accessLevels: []
+      contents: []
     };
   },
   async created() {
-    await Promise.all([
-      this.fetchDepartments(),
-      this.fetchAccessLevels(),
-      this.fetchAllContent()
-    ]);
+    await this.fetchAllContent();
   },
   methods: {
     // Получение всего контента
     async fetchAllContent() {
       try {
-        // Поскольку нет эндпоинта для получения всего контента, создадим его или воспользуемся существующими
-        // Вариант 1: Используем эндпоинт для фильтрации, но получаем весь контент
         const userId = localStorage.getItem("userId");
         if (!userId) {
-          console.error('ID пользователя не найден');
           return;
         }
         
@@ -93,56 +84,13 @@ export default {
         const response = await axios.get(`http://localhost:8000/user/${userId}/content`);
         this.contents = response.data;
       } catch (error) {
-        console.error('Ошибка при получении контента:', error);
         this.contents = [];
       }
     },
     
-    // Получение списка отделов
-    async fetchDepartments() {
-      try {
-        // Временное решение, пока нет эндпоинта для получения отделов
-        this.departments = [
-          { id: 1, department_name: "Администрация" },
-          { id: 2, department_name: "Отдел разработки" },
-          { id: 3, department_name: "Отдел продаж" },
-          { id: 4, department_name: "Отдел маркетинга" },
-          { id: 5, department_name: "ИТ отдел" }
-        ];
-      } catch (error) {
-        console.error('Ошибка при получении отделов:', error);
-      }
-    },
-    
-    // Получение списка уровней доступа
-    async fetchAccessLevels() {
-      try {
-        // Временное решение, пока нет эндпоинта для получения уровней доступа
-        this.accessLevels = [
-          { id: 1, access_name: "Низкий" },
-          { id: 2, access_name: "Средний" },
-          { id: 3, access_name: "Высокий" }
-        ];
-      } catch (error) {
-        console.error('Ошибка при получении уровней доступа:', error);
-      }
-    },
-    
-    // Получение названия отдела по ID
-    getDepartmentName(departmentId) {
-      const department = this.departments.find(d => d.id === departmentId);
-      return department ? department.department_name : "Неизвестный отдел";
-    },
-    
-    // Получение названия уровня доступа по ID
-    getAccessName(accessId) {
-      const access = this.accessLevels.find(a => a.id === accessId);
-      return access ? access.access_name : "Неизвестный уровень";
-    },
-    
     // Получение ссылки для скачивания файла
     getDownloadLink(contentId) {
-      return `http://localhost:8000/download-file/${contentId}`;
+      return `${import.meta.env.VITE_API_URL}/download-file/${contentId}`;
     }
   }
 };

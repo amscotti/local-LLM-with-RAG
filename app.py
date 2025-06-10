@@ -467,7 +467,7 @@ async def get_user(id: int, db: Session = Depends(get_db)):
         "access_name": access_name,
     }
 
-@app.get("/user/{user_id}/content", response_model=List[ContentBase])
+@app.get("/user/{user_id}/content")
 async def get_user_content(user_id: int, db: Session = Depends(get_db)):
     try:
         # Получаем пользователя по user_id
@@ -487,14 +487,28 @@ async def get_user_content(user_id: int, db: Session = Depends(get_db)):
         if not contents:
             raise HTTPException(status_code=404, detail="Контент не найден")
 
-        return [
-            ContentBase(
-                id=content.id,
-                title=content.title,
-                description=content.description,
-                file_path=content.file_path
-            ) for content in contents
-        ]
+        result = []
+        for content in contents:
+            # Получаем название отдела
+            department = db.query(Department).filter(Department.id == content.department_id).first()
+            department_name = department.department_name if department else "Неизвестный отдел"
+            
+            # Получаем название уровня доступа
+            access = db.query(Access).filter(Access.id == content.access_level).first()
+            access_name = access.access_name if access else "Неизвестный уровень"
+            
+            result.append({
+                "id": content.id,
+                "title": content.title,
+                "description": content.description,
+                "file_path": content.file_path,
+                "department_id": content.department_id,
+                "department_name": department_name,
+                "access_level": content.access_level,
+                "access_name": access_name
+            })
+        
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
@@ -539,6 +553,16 @@ async def get_users(db: Session = Depends(get_db)):
         return user_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при получении пользователей: {str(e)}")
+
+@app.get("/api/departments")
+async def get_departments(db: Session = Depends(get_db)):
+    departments = db.query(Department).all()
+    return [{"id": dept.id, "department_name": dept.department_name} for dept in departments]
+
+@app.get("/api/access_levels")
+async def get_access_levels(db: Session = Depends(get_db)):
+    access_levels = db.query(Access).all()
+    return [{"id": access_level.id, "access_name": access_level.access_name} for access_level in access_levels]
 
 if __name__ == "__main__":
     args = parse_arguments()

@@ -232,32 +232,22 @@ export default {
     // Получение списка отделов
     async fetchDepartments() {
       try {
-        // Временное решение, пока нет эндпоинта для получения отделов
-        // В реальной ситуации использовать: const response = await axios.get('http://localhost:8000/departments');
-        this.departments = [
-          { id: 1, department_name: "Администрация" },
-          { id: 2, department_name: "Отдел разработки" },
-          { id: 3, department_name: "Отдел продаж" },
-          { id: 4, department_name: "Отдел маркетинга" },
-          { id: 5, department_name: "ИТ отдел" }
-        ];
+        const response = await axios.get(`http://localhost:8000/api/departments`);
+        this.departments = response.data;
       } catch (error) {
         console.error('Ошибка при получении отделов:', error);
+        this.departments = [];
       }
     },
     
     // Получение списка уровней доступа
     async fetchAccessLevels() {
       try {
-        // Временное решение, пока нет эндпоинта для получения уровней доступа
-        // В реальной ситуации использовать: const response = await axios.get('http://localhost:8000/access-levels');
-        this.accessLevels = [
-          { id: 1, access_name: "Низкий" },
-          { id: 2, access_name: "Средний" },
-          { id: 3, access_name: "Высокий" }
-        ];
+        const response = await axios.get(`http://localhost:8000/api/access_levels`);
+        this.accessLevels = response.data;
       } catch (error) {
-        console.error('Ошибка при получении уровней доступа:', error);
+        console.error('Ошибка при получении отделов:', error);
+        this.accessLevels = [];
       }
     },
     
