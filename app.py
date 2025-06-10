@@ -113,7 +113,6 @@ class InitRequest(BaseModel):
     model_name: str
     embedding_model_name: str
     documents_path: str
-    reload: bool = False
 
 @app.post("/query")
 async def query(request: QueryRequest):
@@ -151,12 +150,13 @@ async def query(request: QueryRequest):
 
 # Эндпоинт для инициализации LLM
 @app.post("/initialize")
-async def initialize(request: InitRequest):
-    success = initialize_llm(request.model_name, request.embedding_model_name, request.documents_path, reload=request.reload)
-    
-    if not success:
-        raise HTTPException(status_code=500, detail="Не удалось инициализировать LLM.")
-    return {"message": "LLM успешно инициализирован."}
+async def initialize_model(model_name: str, embedding_model_name: str, documents_path: str, department_id: str, reload: bool = False, db: Session = Depends(get_db)):
+    try:
+        # Вызов функции инициализации с учетом нового параметра department_id
+        load_documents_into_database(model_name, documents_path, department_id, reload)
+        return {"message": "Модель успешно инициализирована"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Эндпоинт для парсинга аргументов
 @app.get("/parse-args")

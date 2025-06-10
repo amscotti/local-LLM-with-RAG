@@ -29,42 +29,43 @@ def vec_search(embedding_model, query, db, n_top_cos: int = 5):
 
     return top_chunks, top_files
 
-def load_documents_into_database(model_name: str, documents_path: str, reload: bool = True) -> Chroma:
+def load_documents_into_database(model_name: str, documents_path: str, department_id: str, reload: bool = True) -> Chroma:
     """
-    Loads documents from the specified directory into the Chroma database
-    after splitting the text into chunks.
-    
-    Checks for existing files in the database and only loads new files.
+    Загружает документы из указанной директории в векторную базу данных Chroma
+    после разделения текста на части, создавая базу данных для конкретного отдела.
 
     Args:
-        model_name (str): The name of the embedding model to use.
-        documents_path (str): The path to the directory containing documents to load.
-        reload (bool): Whether to reload existing documents. Defaults to True.
+        model_name (str): Название модели эмбеддинга.
+        documents_path (str): Путь к директории с документами.
+        department_id (str): Идентификатор отдела для создания уникальной базы данных.
+        reload (bool): Нужно ли перезагружать существующие документы. По умолчанию True.
 
     Returns:
-        Chroma: The Chroma database with loaded documents.
+        Chroma: Векторная база данных с загруженными документами.
     """
+    # Определяем директорию для хранения данных в зависимости от отдела
+    department_directory = f"{PERSIST_DIRECTORY}/{department_id}"
 
     # Проверяем существует ли директория для хранения данных
-    if os.path.exists(PERSIST_DIRECTORY) and not reload:
-        print("Загрузка существующей базы данных Chroma...")
+    if os.path.exists(department_directory) and not reload:
+        print(f"Загрузка существующей базы данных Chroma для отдела {department_id}...")
         db = Chroma(
             embedding_function=OllamaEmbeddings(model=model_name),
-            persist_directory=PERSIST_DIRECTORY
+            persist_directory=department_directory
         )
         return db
     
     # Если нужно перезагрузить документы или директория не существует
-    print("Загрузка документов...")
+    print(f"Загрузка документов для отдела {department_id}...")
     raw_documents = load_documents(documents_path)
     
     # Если директория для хранения существует, получаем список уже загруженных файлов
     loaded_files = set()
-    if os.path.exists(PERSIST_DIRECTORY):
+    if os.path.exists(department_directory):
         try:
             db = Chroma(
                 embedding_function=OllamaEmbeddings(model=model_name),
-                persist_directory=PERSIST_DIRECTORY
+                persist_directory=department_directory
             )
             # Получаем список файлов, которые уже есть в базе
             all_docs = db.get()
@@ -93,16 +94,16 @@ def load_documents_into_database(model_name: str, documents_path: str, reload: b
     if not new_documents:
         print("Нет новых документов для загрузки")
         # Возвращаем существующую базу данных
-        if os.path.exists(PERSIST_DIRECTORY):
+        if os.path.exists(department_directory):
             return Chroma(
                 embedding_function=OllamaEmbeddings(model=model_name),
-                persist_directory=PERSIST_DIRECTORY
+                persist_directory=department_directory
             )
         # Если директории нет, но и новых документов нет - создаем пустую базу
         return Chroma.from_documents(
             documents=[],
             embedding=OllamaEmbeddings(model=model_name),
-            persist_directory=PERSIST_DIRECTORY
+            persist_directory=department_directory
         )
     
     # Разбиваем новые документы на чанки
@@ -113,10 +114,10 @@ def load_documents_into_database(model_name: str, documents_path: str, reload: b
     print("Создание встраиваний и загрузка документов в Chroma...")
     
     # Если директория существует, добавляем к существующей базе
-    if os.path.exists(PERSIST_DIRECTORY):
+    if os.path.exists(department_directory):
         db = Chroma(
             embedding_function=OllamaEmbeddings(model=model_name),
-            persist_directory=PERSIST_DIRECTORY
+            persist_directory=department_directory
         )
         db.add_documents(documents)
         return db
@@ -125,7 +126,7 @@ def load_documents_into_database(model_name: str, documents_path: str, reload: b
         return Chroma.from_documents(
             documents=documents,
             embedding=OllamaEmbeddings(model=model_name),
-            persist_directory=PERSIST_DIRECTORY
+            persist_directory=department_directory
         )
 
 
