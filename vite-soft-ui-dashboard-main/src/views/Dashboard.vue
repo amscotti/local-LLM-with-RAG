@@ -10,6 +10,7 @@
           :icon-background="stats.iconBackground"
           direction-reverse
           :userId="Number(userId)"
+          :contentId="card.id"
         ></card>
       </div>
     </div>
