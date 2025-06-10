@@ -26,20 +26,20 @@
         </sidenav-collapse>
       </li>
 
-      <li class="nav-item">
+      <!-- <li class="nav-item">
         <sidenav-collapse nav-text="Виртуальная реальность" :to="{ name: 'Virtual Reality' }">
           <template #icon>
             <icon name="virtual-reality" />
           </template>
         </sidenav-collapse>
-      </li>
-      <li class="nav-item">
+      </li> -->
+      <!-- <li class="nav-item">
         <sidenav-collapse nav-text="Правый интерфейс" :to="{ name: 'Rtl' }">
           <template #icon>
             <icon name="rtl-page" />
           </template>
         </sidenav-collapse>
-      </li>
+      </li> -->
       <li class="mt-3 nav-item">
         <h6
           class="text-xs ps-4 text-uppercase font-weight-bolder opacity-6"
@@ -60,13 +60,13 @@
           </template>
         </sidenav-collapse>
       </li>
-      <li class="nav-item">
+      <!-- <li class="nav-item">
         <sidenav-collapse nav-text="Регистрация" :to="{ name: 'Sign Up' }">
           <template #icon>
             <icon name="sign-up" />
           </template>
         </sidenav-collapse>
-      </li>
+      </li> -->
       <li class="nav-item">
         <a class="nav-link" href="#" @click.prevent="handleLogout">
           <div
