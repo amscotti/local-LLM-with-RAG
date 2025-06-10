@@ -113,6 +113,7 @@ class InitRequest(BaseModel):
     model_name: str
     embedding_model_name: str
     documents_path: str
+    reload: bool = False
 
 @app.post("/query")
 async def query(request: QueryRequest):
@@ -151,7 +152,7 @@ async def query(request: QueryRequest):
 # Эндпоинт для инициализации LLM
 @app.post("/initialize")
 async def initialize(request: InitRequest):
-    success = initialize_llm(request.model_name, request.embedding_model_name, request.documents_path)
+    success = initialize_llm(request.model_name, request.embedding_model_name, request.documents_path, reload=request.reload)
     
     if not success:
         raise HTTPException(status_code=500, detail="Не удалось инициализировать LLM.")
@@ -214,7 +215,7 @@ async def check_db_connection():
     finally:
         db.close()
 
-def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str) -> bool:
+def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str, reload: bool = False) -> bool:
     global chat, db, embedding_model
     print("Инициализация LLM...")  # Отладочное сообщение
     try:
@@ -228,7 +229,7 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
 
     try:
         print("Загрузка документов в базу данных...")
-        db = load_documents_into_database(embedding_model_name, documents_path)
+        db = load_documents_into_database(embedding_model_name, documents_path, reload=reload)
         # Инициализируем модель встраивания для векторного поиска
         embedding_model = OllamaEmbeddings(model=embedding_model_name)
         print("База данных успешно инициализирована.")

@@ -33,25 +33,98 @@ def load_documents_into_database(model_name: str, documents_path: str, reload: b
     """
     Loads documents from the specified directory into the Chroma database
     after splitting the text into chunks.
+    
+    Checks for existing files in the database and only loads new files.
+
+    Args:
+        model_name (str): The name of the embedding model to use.
+        documents_path (str): The path to the directory containing documents to load.
+        reload (bool): Whether to reload existing documents. Defaults to True.
 
     Returns:
         Chroma: The Chroma database with loaded documents.
     """
 
-    if reload:
-        print("Loading documents")
-        raw_documents = load_documents(documents_path)
-        documents = TEXT_SPLITTER.split_documents(raw_documents)
-
-        print("Creating embeddings and loading documents into Chroma")
+    # Проверяем существует ли директория для хранения данных
+    if os.path.exists(PERSIST_DIRECTORY) and not reload:
+        print("Загрузка существующей базы данных Chroma...")
+        db = Chroma(
+            embedding_function=OllamaEmbeddings(model=model_name),
+            persist_directory=PERSIST_DIRECTORY
+        )
+        return db
+    
+    # Если нужно перезагрузить документы или директория не существует
+    print("Загрузка документов...")
+    raw_documents = load_documents(documents_path)
+    
+    # Если директория для хранения существует, получаем список уже загруженных файлов
+    loaded_files = set()
+    if os.path.exists(PERSIST_DIRECTORY):
+        try:
+            db = Chroma(
+                embedding_function=OllamaEmbeddings(model=model_name),
+                persist_directory=PERSIST_DIRECTORY
+            )
+            # Получаем список файлов, которые уже есть в базе
+            all_docs = db.get()
+            if all_docs and all_docs.get('metadatas'):
+                for metadata in all_docs['metadatas']:
+                    if metadata and 'source' in metadata:
+                        loaded_files.add(metadata['source'])
+            print(f"Уже загружено {len(loaded_files)} файлов")
+        except Exception as e:
+            print(f"Ошибка при попытке получить список загруженных файлов: {e}")
+            # Если произошла ошибка, считаем что нет загруженных файлов
+            loaded_files = set()
+    
+    # Фильтруем только новые документы
+    new_documents = []
+    for doc in raw_documents:
+        if hasattr(doc, 'metadata') and 'source' in doc.metadata:
+            if doc.metadata['source'] not in loaded_files:
+                new_documents.append(doc)
+        else:
+            # Если у документа нет метаданных о источнике, добавляем его
+            new_documents.append(doc)
+    
+    print(f"Найдено {len(new_documents)} новых документов из {len(raw_documents)} всего")
+    
+    if not new_documents:
+        print("Нет новых документов для загрузки")
+        # Возвращаем существующую базу данных
+        if os.path.exists(PERSIST_DIRECTORY):
+            return Chroma(
+                embedding_function=OllamaEmbeddings(model=model_name),
+                persist_directory=PERSIST_DIRECTORY
+            )
+        # Если директории нет, но и новых документов нет - создаем пустую базу
         return Chroma.from_documents(
-            documents=documents,
+            documents=[],
             embedding=OllamaEmbeddings(model=model_name),
             persist_directory=PERSIST_DIRECTORY
         )
-    else:
-        return Chroma(
+    
+    # Разбиваем новые документы на чанки
+    documents = TEXT_SPLITTER.split_documents(new_documents)
+    print(f"Разбито на {len(documents)} чанков")
+    
+    # Создаем встраивания и загружаем в Chroma
+    print("Создание встраиваний и загрузка документов в Chroma...")
+    
+    # Если директория существует, добавляем к существующей базе
+    if os.path.exists(PERSIST_DIRECTORY):
+        db = Chroma(
             embedding_function=OllamaEmbeddings(model=model_name),
+            persist_directory=PERSIST_DIRECTORY
+        )
+        db.add_documents(documents)
+        return db
+    else:
+        # Иначе создаем новую базу
+        return Chroma.from_documents(
+            documents=documents,
+            embedding=OllamaEmbeddings(model=model_name),
             persist_directory=PERSIST_DIRECTORY
         )
 

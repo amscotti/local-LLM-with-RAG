@@ -38,12 +38,15 @@ else:
     selected_model = st.selectbox("Выберите модель", st.session_state["list_of_models"], index=0)
     embedding_model_name = st.text_input("Имя модели встраивания", "snowflake-arctic-embed2:latest")
     documents_path = st.text_input("Путь к документам", "Research")
+    reload_documents = st.checkbox("Перезагрузить все документы", value=False, 
+                                  help="Если отмечено, система загрузит все документы заново. Если нет - только новые документы.")
 
     if st.button("Инициализировать модель"):
         response = requests.post(f"{API_URL}/initialize", json={
             "model_name": selected_model,
             "embedding_model_name": embedding_model_name,
-            "documents_path": documents_path
+            "documents_path": documents_path,
+            "reload": reload_documents
         })
         if response.status_code == 200:
             st.success(response.json().get("message"))
@@ -54,14 +57,32 @@ else:
     st.header("Запрос к модели")
     user_question = st.text_input("Введите ваш вопрос")
 
-    if st.button("Отправить вопрос"):
-        response = requests.post(f"{API_URL}/query", json={"question": user_question})
-        if response.status_code == 200:
-            answer = response.json().get("answer")
-            chunks = response.json().get("chunks")
-            files = response.json().get("files")
-            st.success(f"Ответ: {answer}")
-            st.write("Фрагменты:", chunks)
-            st.write("Файлы:", files)
+    if st.button("Отправить запрос"):
+        if user_question:
+            with st.spinner("Генерация ответа..."):
+                response = requests.post(f"{API_URL}/query", json={"question": user_question})
+                if response.status_code == 200:
+                    st.markdown("### Ответ:")
+                    st.markdown(response.json().get("answer"))
+                    
+                    # Отображение использованных фрагментов
+                    st.markdown("### Использованные фрагменты:")
+                    chunks = response.json().get("chunks", [])
+                    if chunks:
+                        for i, chunk in enumerate(chunks):
+                            st.markdown(f"**Фрагмент {i+1}:** {chunk}")
+                    else:
+                        st.info("Нет доступных фрагментов")
+                    
+                    # Отображение использованных файлов
+                    st.markdown("### Использованные файлы:")
+                    files = response.json().get("files", [])
+                    if files:
+                        for i, file in enumerate(files):
+                            st.markdown(f"**Файл {i+1}:** {file}")
+                    else:
+                        st.info("Нет доступных файлов")
+                else:
+                    st.error(f"Ошибка: {response.json().get('detail')}")
         else:
-            st.error(response.json().get("detail"))
+            st.warning("Пожалуйста, введите вопрос.")
