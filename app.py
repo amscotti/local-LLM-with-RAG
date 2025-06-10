@@ -564,6 +564,79 @@ async def get_access_levels(db: Session = Depends(get_db)):
     access_levels = db.query(Access).all()
     return [{"id": access_level.id, "access_name": access_level.access_name} for access_level in access_levels]
 
+@app.put("/user/{user_id}")
+async def update_user(user_id: int, user_data: dict, db: Session = Depends(get_db)):
+    try:
+        # Получаем пользователя по ID
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        
+        # Обновляем данные пользователя
+        if "department_id" in user_data:
+            user.department_id = user_data["department_id"]
+        
+        if "access_id" in user_data:
+            user.access_id = user_data["access_id"]
+            
+        # Сохраняем изменения
+        db.commit()
+        db.refresh(user)
+        
+        return {"message": "Данные пользователя успешно обновлены"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при обновлении пользователя: {str(e)}")
+
+@app.delete("/user/{user_id}")
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
+    try:
+        # Получаем пользователя по ID
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        
+        # Удаляем пользователя
+        db.delete(user)
+        db.commit()
+        
+        return {"message": "Пользователь успешно удален"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при удалении пользователя: {str(e)}")
+
+@app.put("/user/{user_id}/password")
+async def update_password(user_id: int, password_data: dict, db: Session = Depends(get_db)):
+    try:
+        # Получаем пользователя по ID
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        
+        # Хешируем новый пароль
+        hashed_password = pwd_context.hash(password_data["password"])
+        
+        # Обновляем пароль пользователя
+        user.password = hashed_password
+        
+        # Сохраняем изменения
+        db.commit()
+        
+        return {"message": "Пароль пользователя успешно обновлен"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при обновлении пароля: {str(e)}")
+
+@app.get("/departments")
+async def get_departments(db: Session = Depends(get_db)):
+    departments = db.query(Department).all()
+    return [{"id": dept.id, "name": dept.department_name} for dept in departments]
+
+@app.get("/access-levels")
+async def get_access_level(db: Session = Depends(get_db)):
+    access_levels = db.query(Access).all()
+    return [{"id": access.id, "access_name": access.access_name} for access in access_levels]
+
 if __name__ == "__main__":
     args = parse_arguments()
     main(args.model, args.embedding_model, args.path, args.web, args.port)

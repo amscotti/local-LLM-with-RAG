@@ -33,7 +33,7 @@ class Access(Base):
     __tablename__ = "access"
 
     id = Column(Integer, primary_key=True, index=True)
-    access_name = Column(String(255), nullable=False)
+    access_name = Column(String(50), unique=True, nullable=False)  # Название уровня доступа
 
 class Content(Base):
     __tablename__ = "content"
