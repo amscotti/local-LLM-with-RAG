@@ -55,7 +55,7 @@ export default {
   methods: {
     async fetchCards(userId) {
       try {
-        const response = await axios.get(`http://localhost:8000/user/${userId}/content`); // Новый эндпоинт
+        const response = await axios.get(`http://192.168.81.149:8000/user/${userId}/content`); // Новый эндпоинт
         if (Array.isArray(response.data)) {
           this.cards = response.data; // Сохранение данных в массив
           console.log('Cards:', this.cards);

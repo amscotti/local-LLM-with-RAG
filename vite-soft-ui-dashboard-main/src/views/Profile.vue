@@ -198,7 +198,7 @@ export default {
     async fetchUserData() {
       try {
         const userId = localStorage.getItem("userId"); // Получаем ID пользователя из localStorage
-        const response = await axios.get(`http://localhost:8000/user/${userId}`); // Замените 1 на нужный ID пользователя
+        const response = await axios.get(`http://192.168.81.149:8000/user/${userId}`); // Замените 1 на нужный ID пользователя
         this.user = response.data;
       } catch (error) {
         console.error("Ошибка при получении данных пользователя:", error);

@@ -232,7 +232,7 @@ export default {
     // Получение списка отделов
     async fetchDepartments() {
       try {
-        const response = await axios.get(`http://localhost:8000/api/departments`);
+        const response = await axios.get(`http://192.168.81.149:8000/api/departments`);
         this.departments = response.data;
       } catch (error) {
         console.error('Ошибка при получении отделов:', error);
@@ -243,7 +243,7 @@ export default {
     // Получение списка уровней доступа
     async fetchAccessLevels() {
       try {
-        const response = await axios.get(`http://localhost:8000/api/access_levels`);
+        const response = await axios.get(`http://192.168.81.149:8000/api/access_levels`);
         this.accessLevels = response.data;
       } catch (error) {
         console.error('Ошибка при получении отделов:', error);
@@ -254,7 +254,7 @@ export default {
     // Получение списка моделей LLM
     async fetchLLMModels() {
       try {
-        const response = await axios.get('http://localhost:8000/models/llm');
+        const response = await axios.get('http://192.168.81.149:8000/models/llm');
         if (response.data && response.data.models) {
           this.llmModels = response.data.models;
         } else {
@@ -281,7 +281,7 @@ export default {
     // Получение списка моделей эмбеддингов
     async fetchEmbeddingModels() {
       try {
-        const response = await axios.get('http://localhost:8000/models/embedding');
+        const response = await axios.get('http://192.168.81.149:8000/models/embedding');
         if (response.data && response.data.models) {
           this.embeddingModels = response.data.models;
         } else {
@@ -306,7 +306,7 @@ export default {
     // Регистрация пользователя
     async registerUser() {
       try {
-        const response = await axios.post('http://localhost:8000/register', this.registerForm);
+        const response = await axios.post('http://192.168.81.149:8000/register', this.registerForm);
         this.registerMessage = 'Пользователь успешно зарегистрирован!';
         this.registerStatus = true;
         
@@ -352,7 +352,7 @@ export default {
         
         // Отправляем запрос с параметрами в URL-строке
         const response = await axios.post(
-          `http://localhost:8000/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
+          `http://192.168.81.149:8000/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
           `&description=${encodeURIComponent(this.contentForm.description)}` +
           `&access_id=${this.contentForm.access_level}` +
           `&department_id=${this.contentForm.department_id}`,
@@ -417,7 +417,7 @@ export default {
           documents_path: documentsPath
         });
         
-        const response = await axios.post('http://localhost:8000/initialize', {
+        const response = await axios.post('http://192.168.81.149:8000/initialize', {
           model_name: modelName,
           embedding_model_name: embeddingModelName,
           documents_path: documentsPath

@@ -175,7 +175,7 @@ export default {
 
       try {
         this.errorMessage = "";
-        const response = await axios.post("http://localhost:8000/register", {
+        const response = await axios.post("http://192.168.81.149:8000/register", {
           login: this.login,
           password: this.password,
           role_id: 1,

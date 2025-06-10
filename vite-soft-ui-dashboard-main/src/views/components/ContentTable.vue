@@ -77,11 +77,11 @@ export default {
         }
         
         // Получаем данные о пользователе
-        const userResponse = await axios.get(`http://localhost:8000/user/${userId}`);
+        const userResponse = await axios.get(`http://192.168.81.149:8000/user/${userId}`);
         const user = userResponse.data;
         
         // Получаем контент для пользователя
-        const response = await axios.get(`http://localhost:8000/user/${userId}/content`);
+        const response = await axios.get(`http://192.168.81.149:8000/user/${userId}/content`);
         this.contents = response.data;
       } catch (error) {
         this.contents = [];
@@ -90,7 +90,7 @@ export default {
     
     // Получение ссылки для скачивания файла
     getDownloadLink(contentId) {
-      return `${import.meta.env.VITE_API_URL}/download-file/${contentId}`;
+      return `192.168.81.149/download-file/${contentId}`;
     }
   }
 };
