@@ -22,8 +22,15 @@ Thank you very much to [amscotti](https://github.com/amscotti) whose repository 
 
 
 ## Запуск
-1. Запускаем СЕРВЕР------------------->`uvicorn app:app --host 0.0.0.0 --port 8000` 
+1. Запускаем СЕРВЕР------------------->`uvicorn app:app --host 127.0.0.1 --port 8000` 
 2. Запускаем ИНТЕРФЕЙС ПОЛЬЗОВАТЕЛЯ--->`streamlit run ui_client.py`
+
+
+{
+  "model_name": "ilyagusev/saiga_llama3:latest",
+  "embedding_model_name": "snowflake-arctic-embed2:latest",
+  "documents_path": "Research"
+}
 
 
 ## Используемые технологии
