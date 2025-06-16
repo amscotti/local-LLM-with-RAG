@@ -12,7 +12,7 @@
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Описание</th>
               <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Отдел</th>
               <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Уровень доступа</th>
-              <th class="text-secondary opacity-7"></th>
+              <th class="text-secondary opacity-7">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -34,12 +34,21 @@
                 <span class="text-secondary text-xs font-weight-bold">{{ content.access_name }}</span>
               </td>
               <td class="align-middle text-center">
-                <a
-                  :href="getDownloadLink(content.id)"
-                  class="text-secondary font-weight-bold text-xs"
-                  data-toggle="tooltip"
-                  data-original-title="Скачать файл"
-                >Скачать</a>
+                <div class="d-flex justify-content-center">
+                  <a
+                    :href="getDownloadLink(content.id)"
+                    class="text-secondary font-weight-bold text-xs me-3"
+                    data-toggle="tooltip"
+                    data-original-title="Скачать файл"
+                  >Скачать</a>
+                  <a
+                    href="#"
+                    class="text-danger font-weight-bold text-xs"
+                    data-toggle="tooltip"
+                    data-original-title="Удалить контент"
+                    @click.prevent="deleteContent(content.id)"
+                  >Удалить</a>
+                </div>
               </td>
             </tr>
             <tr v-if="contents.length === 0">
@@ -90,7 +99,20 @@ export default {
     
     // Получение ссылки для скачивания файла
     getDownloadLink(contentId) {
-      return `192.168.81.149/download-file/${contentId}`;
+      return `http://192.168.81.149:8000/download-file/${contentId}`;
+    },
+    
+    // Удаление контента
+    async deleteContent(contentId) {
+      if (confirm('Вы уверены, что хотите удалить этот контент?')) {
+        try {
+          await axios.delete(`http://192.168.81.149:8000/content/${contentId}`);
+          this.fetchAllContent(); // Обновляем список контента
+        } catch (error) {
+          console.error('Ошибка при удалении контента:', error);
+          alert('Произошла ошибка при удалении контента');
+        }
+      }
     }
   }
 };

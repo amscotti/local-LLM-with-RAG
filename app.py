@@ -832,6 +832,33 @@ async def get_content_by_id(content_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
+@app.delete("/content/{content_id}")
+async def delete_content(content_id: int, db: Session = Depends(get_db)):
+    try:
+        # Получаем контент по ID
+        content = db.query(Content).filter(Content.id == content_id).first()
+        if not content:
+            raise HTTPException(status_code=404, detail="Контент не найден")
+        
+        # Сохраняем путь к файлу
+        file_path = content.file_path
+        
+        # Удаляем контент из базы данных
+        db.delete(content)
+        db.commit()
+        
+        # Удаляем файл с сервера, если он существует
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception as e:
+                print(f"Ошибка при удалении файла {file_path}: {e}")
+        
+        return {"message": "Контент успешно удален"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Ошибка при удалении контента: {str(e)}")
+
 if __name__ == "__main__":
     args = parse_arguments()
     main(args.model, args.embedding_model, args.path, args.web, args.port)
