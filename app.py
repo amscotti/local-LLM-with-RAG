@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from pydantic import BaseModel
 import uvicorn
 import os
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, inspect
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +11,7 @@ import secrets
 from typing import List
 from fastapi.responses import FileResponse
 
-from models_db import User, Department, Access, Content
+from models_db import User, Department, Access, Content, Tag
 from document_loader import load_documents_into_database, vec_search
 import argparse
 import sys
@@ -386,7 +386,15 @@ app.add_middleware(
 )
 
 @app.post("/upload-content")
-async def upload_content(title: str, description: str, access_id: int, department_id: int, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_content(
+    title: str,
+    description: str,
+    access_id: int,
+    department_id: int,
+    tag_id: int = None,  # Новый параметр для указания тега
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
     # Сохранение файла на сервере
     file_location = f"content_files/{file.filename}"
     with open(file_location, "wb") as f:
@@ -403,7 +411,8 @@ async def upload_content(title: str, description: str, access_id: int, departmen
         description=description,
         file_path=file_location,
         access_level=access_id,
-        department_id=department_id
+        department_id=department_id,
+        tag_id=tag_id  # Указываем тег, если он есть
     )
     db.add(new_content)
     db.commit()
@@ -411,9 +420,41 @@ async def upload_content(title: str, description: str, access_id: int, departmen
 
     return {"message": "Контент успешно загружен"}
 
+@app.put("/content/{content_id}")
+async def update_content(
+    content_id: int,
+    title: str = None,
+    description: str = None,
+    access_id: int = None,
+    department_id: int = None,
+    tag_id: int = None,
+    db: Session = Depends(get_db)
+):
+    # Получаем контент из базы данных по ID
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if content is None:
+        raise HTTPException(status_code=404, detail="Контент не найден")
 
+    # Обновляем поля, если они были переданы
+    if title is not None:
+        content.title = title
+    if description is not None:
+        content.description = description
+    if access_id is not None:
+        # Проверка существования уровня доступа
+        access = db.query(Access).filter(Access.id == access_id).first()
+        if access is None:
+            raise HTTPException(status_code=400, detail="Уровень доступа не найден")
+        content.access_level = access_id
+    if department_id is not None:
+        content.department_id = department_id
+    if tag_id is not None:
+        content.tag_id = tag_id
 
+    db.commit()
+    db.refresh(content)
 
+    return {"message": "Контент успешно обновлен", "content": content}
 
 class ContentBase(BaseModel):
     id: int
@@ -424,25 +465,37 @@ class ContentBase(BaseModel):
     class Config:
         orm_mode = True
 
-@app.get("/content/filter", response_model=List[ContentBase])
-async def get_content_by_access_and_department(access_level: int, department_id: int, db: Session = Depends(get_db)):
+@app.get("/content/filter")
+async def get_content_by_access_and_department(
+    access_level: int,
+    department_id: int,
+    tag_id: int = None,  # Новый параметр для фильтрации по тегу
+    db: Session = Depends(get_db)
+):
     try:
-        # Получаем контент из базы данных по access_level и department_id
-        contents = db.query(Content).filter(
+        query = db.query(Content).filter(
             Content.access_level == access_level,
             Content.department_id == department_id
-        ).all()
+        )
+        
+        if tag_id is not None:
+            query = query.filter(Content.tag_id == tag_id)  # Фильтрация по тегу
+
+        contents = query.all()
 
         if not contents:
             raise HTTPException(status_code=404, detail="Контент не найден")
 
         return [
-            ContentBase(
-                id=content.id,
-                title=content.title,
-                description=content.description,
-                file_path=content.file_path
-            ) for content in contents
+            {
+                "id": content.id,
+                "title": content.title,
+                "description": content.description,
+                "file_path": content.file_path,
+                "access_level": content.access_level,
+                "department_id": content.department_id,
+                "tag_id": content.tag_id  # Возвращаем ID тега
+            } for content in contents
         ]
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
@@ -637,6 +690,110 @@ async def get_departments(db: Session = Depends(get_db)):
 async def get_access_level(db: Session = Depends(get_db)):
     access_levels = db.query(Access).all()
     return [{"id": access.id, "access_name": access.access_name} for access in access_levels]
+
+@app.get("/tables")
+async def get_tables(db: Session = Depends(get_db)):
+    try:
+        inspector = inspect(db.bind)
+        tables = inspector.get_table_names()
+        return {"tables": tables}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении таблиц: {str(e)}")
+
+@app.get("/tables/{table_name}")
+async def get_table_info(table_name: str, db: Session = Depends(get_db)):
+    try:
+        inspector = inspect(db.bind)
+        columns = inspector.get_columns(table_name)
+        return {"table": table_name, "columns": columns}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении информации о таблице {table_name}: {str(e)}")
+
+class TagCreate(BaseModel):
+    tag_name: str
+
+@app.post("/tags")
+async def create_tag(tag: TagCreate, db: Session = Depends(get_db)):
+    try:
+        new_tag = Tag(tag_name=tag.tag_name)
+        db.add(new_tag)
+        db.commit()
+        db.refresh(new_tag)
+        return {"message": "Тег успешно добавлен", "tag": new_tag}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при добавлении тега: {str(e)}")
+
+@app.get("/tags")
+async def get_tags(db: Session = Depends(get_db)):
+    try:
+        tags = db.query(Tag).all()  # Получаем все теги из базы данных
+        return {"tags": tags}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении тегов: {str(e)}")
+
+@app.get("/user/{user_id}/content/by-tags")
+async def get_user_content_by_tags(user_id: int, db: Session = Depends(get_db)):
+    try:
+        # Получаем пользователя по user_id
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        # Получаем все теги
+        tags = db.query(Tag).all()
+        
+        # Создаем словарь для результата
+        result = {
+            "tags": [],
+            "untagged_content": []
+        }
+        
+        # Добавляем информацию о тегах и связанном контенте
+        for tag in tags:
+            # Получаем контент для данного тега с учетом прав доступа пользователя
+            tag_content = db.query(Content).filter(
+                Content.tag_id == tag.id,
+                Content.access_level == user.access_id,
+                Content.department_id == user.department_id
+            ).all()
+            
+            # Если есть контент для этого тега, добавляем его в результат
+            if tag_content:
+                tag_info = {
+                    "id": tag.id,
+                    "tag_name": tag.tag_name,
+                    "content": []
+                }
+                
+                for content in tag_content:
+                    tag_info["content"].append({
+                        "id": content.id,
+                        "title": content.title,
+                        "description": content.description,
+                        "file_path": content.file_path
+                    })
+                
+                result["tags"].append(tag_info)
+        
+        # Получаем контент без тега
+        untagged_content = db.query(Content).filter(
+            Content.tag_id == None,
+            Content.access_level == user.access_id,
+            Content.department_id == user.department_id
+        ).all()
+        
+        # Добавляем контент без тега в результат
+        for content in untagged_content:
+            result["untagged_content"].append({
+                "id": content.id,
+                "title": content.title,
+                "description": content.description,
+                "file_path": content.file_path
+            })
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
 if __name__ == "__main__":
     args = parse_arguments()
