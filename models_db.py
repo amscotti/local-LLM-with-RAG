@@ -44,9 +44,11 @@ class Content(Base):
     file_path = Column(String(255), nullable=False)  # Путь к файлу
     access_level = Column(Integer, ForeignKey("access.id"), nullable=False)  # Уровень доступа
     department_id = Column(Integer, ForeignKey("department.id"), nullable=False)  # ID отдела
+    tag_id = Column(Integer, ForeignKey("tags.id"), nullable=True)  # ID тега
 
     access = relationship("Access")  # Связь с таблицей Access
     department = relationship("Department")  # Связь с таблицей Department
+    tag = relationship("Tag")  # Связь с таблицей Tag
 
 class ContentBase(BaseModel):
     id: int
@@ -56,4 +58,10 @@ class ContentBase(BaseModel):
 
     class Config:
         orm_mode = True
+
+class Tag(Base):
+    __tablename__ = "tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tag_name = Column(String(255), nullable=False)  # Название тега
 
