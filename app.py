@@ -795,6 +795,43 @@ async def get_user_content_by_tags(user_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
+@app.get("/content/all")
+async def get_all_content(db: Session = Depends(get_db)):
+    try:
+        contents = db.query(Content).all()
+        return [
+            {
+                "id": content.id,
+                "title": content.title,
+                "description": content.description,
+                "file_path": content.file_path,
+                "access_level": content.access_level,
+                "department_id": content.department_id,
+                "tag_id": content.tag_id
+            } for content in contents
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
+
+@app.get("/content/{content_id}")
+async def get_content_by_id(content_id: int, db: Session = Depends(get_db)):
+    try:
+        content = db.query(Content).filter(Content.id == content_id).first()
+        if content is None:
+            raise HTTPException(status_code=404, detail="Контент не найден")
+        
+        return {
+            "id": content.id,
+            "title": content.title,
+            "description": content.description,
+            "file_path": content.file_path,
+            "access_level": content.access_level,
+            "department_id": content.department_id,
+            "tag_id": content.tag_id
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
+
 if __name__ == "__main__":
     args = parse_arguments()
     main(args.model, args.embedding_model, args.path, args.web, args.port)

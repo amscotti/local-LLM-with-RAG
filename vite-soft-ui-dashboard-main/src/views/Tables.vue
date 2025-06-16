@@ -31,6 +31,9 @@
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="initialize-tab" data-bs-toggle="tab" data-bs-target="#initialize" type="button" role="tab" aria-controls="initialize" aria-selected="false">Инициализация LLM</button>
               </li>
+              <li class="nav-item" role="presentation">
+                <button class="nav-link" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="false">Редактирование контента</button>
+              </li>
             </ul>
             
             <div class="tab-content mt-3" id="adminTabsContent">
@@ -178,6 +181,72 @@
                   </div>
                 </form>
               </div>
+              
+              <!-- Вкладка редактирования контента -->
+              <div class="tab-pane fade" id="edit" role="tabpanel" aria-labelledby="edit-tab">
+                <div class="row mb-4">
+                  <div class="col-12">
+                    <div class="form-group">
+                      <label for="content-select" class="form-label">Выберите контент для редактирования</label>
+                      <select class="form-select" id="content-select" v-model="editForm.id" @change="loadContentForEdit">
+                        <option value="">Выберите контент</option>
+                        <option v-for="content in contentList" :key="content.id" :value="content.id">
+                          {{ content.title }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                
+                <form @submit.prevent="editContent" v-if="editForm.id">
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="edit-title" class="form-label">Название</label>
+                      <input type="text" class="form-control" id="edit-title" v-model="editForm.title" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="edit-description" class="form-label">Описание</label>
+                      <textarea class="form-control" id="edit-description" rows="3" v-model="editForm.description"></textarea>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="edit-department" class="form-label">Отдел</label>
+                      <select class="form-select" id="edit-department" v-model="editForm.department_id" required>
+                        <option v-for="department in departments" :key="department.id" :value="department.id">
+                          {{ department.department_name }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="edit-access_level" class="form-label">Уровень доступа</label>
+                      <select class="form-select" id="edit-access_level" v-model="editForm.access_level" required>
+                        <option v-for="access in accessLevels" :key="access.id" :value="access.id">
+                          {{ access.access_name }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="edit-tag" class="form-label">Тег</label>
+                      <select class="form-select" id="edit-tag" v-model="editForm.tag_id">
+                        <option value="">Без категории</option>
+                        <option v-for="tag in tags" :key="tag.id" :value="tag.id">
+                          {{ tag.tag_name }}
+                        </option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="submit" class="btn bg-gradient-success">Сохранить изменения</button>
+                  <div v-if="editMessage" :class="['alert', editStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
+                    {{ editMessage }}
+                  </div>
+                </form>
+                <div v-else class="alert alert-info">
+                  Выберите контент для редактирования
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -239,7 +308,20 @@ export default {
       accessLevels: [],
       llmModels: [],
       embeddingModels: [],
-      tags: []
+      tags: [],
+      
+      // Форма редактирования контента
+      editForm: {
+        id: '',
+        title: '',
+        description: '',
+        department_id: null,
+        access_level: null,
+        tag_id: null
+      },
+      editMessage: '',
+      editStatus: false,
+      contentList: []
     };
   },
   async created() {
@@ -248,6 +330,7 @@ export default {
     await this.fetchLLMModels();
     await this.fetchEmbeddingModels();
     await this.fetchTags();
+    await this.fetchAllContent();
   },
   methods: {
     // Получение списка отделов
@@ -331,6 +414,17 @@ export default {
         this.tags = response.data.tags;
       } catch (error) {
         console.error('Ошибка при получении тегов:', error);
+      }
+    },
+    
+    // Получение списка всего контента
+    async fetchAllContent() {
+      try {
+        const response = await axios.get('http://192.168.81.149:8000/content/all');
+        this.contentList = response.data;
+      } catch (error) {
+        console.error('Ошибка при получении списка контента:', error);
+        this.contentList = [];
       }
     },
     
@@ -466,6 +560,58 @@ export default {
         console.error('Ошибка инициализации LLM:', error);
       } finally {
         this.isInitializing = false;
+      }
+    },
+    
+    // Загрузка контента для редактирования
+    async loadContentForEdit() {
+      if (!this.editForm.id) return;
+      
+      try {
+        const response = await axios.get(`http://192.168.81.149:8000/content/${this.editForm.id}`);
+        const content = response.data;
+        
+        this.editForm = {
+          id: content.id,
+          title: content.title,
+          description: content.description,
+          department_id: content.department_id,
+          access_level: content.access_level,
+          tag_id: content.tag_id || null
+        };
+      } catch (error) {
+        console.error('Ошибка при загрузке контента для редактирования:', error);
+        this.editMessage = 'Ошибка при загрузке контента';
+        this.editStatus = false;
+      }
+    },
+    
+    // Редактирование контента
+    async editContent() {
+      try {
+        const response = await axios.put(`http://192.168.81.149:8000/content/${this.editForm.id}`, {
+          title: this.editForm.title,
+          description: this.editForm.description,
+          access_id: this.editForm.access_level,
+          department_id: this.editForm.department_id,
+          tag_id: this.editForm.tag_id
+        });
+        
+        this.editMessage = 'Контент успешно отредактирован!';
+        this.editStatus = true;
+        
+        // Обновляем список контента
+        await this.fetchAllContent();
+        
+        // Обновляем таблицу контента
+        const contentTableRef = this.$refs.contentTable;
+        if (contentTableRef && typeof contentTableRef.fetchAllContent === 'function') {
+          contentTableRef.fetchAllContent();
+        }
+      } catch (error) {
+        this.editMessage = error.response?.data?.detail || 'Ошибка при редактировании контента';
+        this.editStatus = false;
+        console.error('Ошибка редактирования контента:', error);
       }
     }
   }
