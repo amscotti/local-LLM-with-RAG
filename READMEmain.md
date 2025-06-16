@@ -43,3 +43,12 @@ Thank you very much to [amscotti](https://github.com/amscotti) whose repository 
 
 
 
+
+
+
+{
+  "model_name": "ilyagusev/saiga_llama3:latest",
+  "embedding_model_name": "snowflake-arctic-embed2:latest",
+  "documents_path": "Research",
+  "department_id": "5"
+}

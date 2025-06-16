@@ -14,18 +14,27 @@ PERSIST_DIRECTORY = "storage"
 TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324)
 
 def vec_search(embedding_model, query, db, n_top_cos: int = 5):
-    print(f"Searching for query: {query}")
+    """
+    Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
+    
+    Args:
+        embedding_model: Модель для создания эмбеддингов
+        query (str): Текст запроса
+        db: Векторная база данных
+        n_top_cos (int): Количество результатов для возврата
+        
+    Returns:
+        tuple: Кортеж из двух списков - топ-фрагменты и топ-файлы
+    """
+    # Кодируем запрос в вектор
     query_emb = embedding_model.embed_documents([query])[0]
-    print(f"Query embedding: {query_emb}")
 
+    # Поиск в базе данных
     search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
-    print(f"Search results: {search_result}")
 
-    top_chunks = [x.metadata.get('chunk') for x in search_result]
-    top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
-
-    print(f"Top chunks: {top_chunks}")
-    print(f"Top files: {top_files}")
+    # Извлечение фрагментов и файлов из метаданных
+    top_chunks = [x.page_content for x in search_result]
+    top_files = list({x.metadata.get('source') for x in search_result if x.metadata.get('source')})
 
     return top_chunks, top_files
 

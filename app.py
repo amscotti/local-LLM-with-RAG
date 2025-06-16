@@ -54,9 +54,10 @@ def get_available_models():
 
 # Инициализация глобальных переменных
 app = FastAPI()
-chat = None
-db = None
-embedding_model = None
+# Словари для хранения экземпляров чатов и баз данных для каждого отдела
+department_chats = {}  # {department_id: chat_instance}
+department_dbs = {}    # {department_id: db_instance}
+department_embedding_models = {}  # {department_id: embedding_model_instance}
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Настройки подключения к базе данных
@@ -108,27 +109,30 @@ async def generate(request: GenerateRequest):
 # Эндпоинт для векторного поиска
 class QueryRequest(BaseModel):
     question: str
+    department_id: str = "default"
 
 class InitRequest(BaseModel):
     model_name: str
     embedding_model_name: str
     documents_path: str
+    department_id: str = "default"
 
 @app.post("/query")
 async def query(request: QueryRequest):
-    global chat
-    if chat is None:
-        raise HTTPException(status_code=500, detail="LLM не инициализирован. Запустите сервер с правильными параметрами.")
+    department_id = request.department_id
     
-    print(f"Получен запрос: {request}")  # Отладочное сообщение
+    if department_id not in department_chats:
+        raise HTTPException(status_code=500, detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /initialize.")
+    
+    print(f"Получен запрос для отдела {department_id}: {request}")  # Отладочное сообщение
     user_question = request.question
     
     # Выполняем векторный поиск фрагментов
-    top_chunks, top_files = vec_search(embedding_model, user_question, db, n_top_cos=5)
+    top_chunks, top_files = vec_search(department_embedding_models[department_id], user_question, department_dbs[department_id], n_top_cos=5)
     
     try:
-        response = chat(user_question)
-        print(f"Ответ от LLM: {response}")  # Отладочное сообщение
+        response = department_chats[department_id](user_question)
+        print(f"Ответ от LLM для отдела {department_id}: {response}")  # Отладочное сообщение
         
         if response is None:
             print("Получен пустой ответ от LLM")
@@ -150,11 +154,25 @@ async def query(request: QueryRequest):
 
 # Эндпоинт для инициализации LLM
 @app.post("/initialize")
-async def initialize_model(model_name: str, embedding_model_name: str, documents_path: str, department_id: str, reload: bool = False, db: Session = Depends(get_db)):
+async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
     try:
-        # Вызов функции инициализации с учетом нового параметра department_id
-        load_documents_into_database(model_name, documents_path, department_id, reload)
-        return {"message": "Модель успешно инициализирована"}
+        # Проверяем существование отдела в базе данных
+        department = db.query(Department).filter(Department.id == int(request.department_id)).first()
+        if not department and request.department_id != "default":
+            raise HTTPException(status_code=404, detail=f"Отдел с ID {request.department_id} не найден")
+        
+        # Вызов функции инициализации с учетом отдела
+        success = initialize_llm(
+            request.model_name, 
+            request.embedding_model_name, 
+            request.documents_path, 
+            request.department_id
+        )
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Не удалось инициализировать модель")
+            
+        return {"message": f"Модель для отдела {request.department_id} успешно инициализирована"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -215,9 +233,9 @@ async def check_db_connection():
     finally:
         db.close()
 
-def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str, reload: bool = False) -> bool:
-    global chat, db, embedding_model
-    print("Инициализация LLM...")  # Отладочное сообщение
+def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str, department_id: str, reload: bool = False) -> bool:
+    global department_chats, department_dbs, department_embedding_models
+    print(f"Инициализация LLM для отдела {department_id}...")  # Отладочное сообщение
     try:
         print("Проверка доступности LLM модели...")
         check_if_model_is_available(llm_model_name)
@@ -228,11 +246,14 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
         return False
 
     try:
-        print("Загрузка документов в базу данных...")
-        db = load_documents_into_database(embedding_model_name, documents_path, reload=reload)
+        print(f"Загрузка документов в базу данных для отдела {department_id}...")
+        department_db = load_documents_into_database(embedding_model_name, documents_path, department_id, reload=reload)
+        # Сохраняем базу данных для этого отдела
+        department_dbs[department_id] = department_db
         # Инициализируем модель встраивания для векторного поиска
         embedding_model = OllamaEmbeddings(model=embedding_model_name)
-        print("База данных успешно инициализирована.")
+        department_embedding_models[department_id] = embedding_model
+        print(f"База данных для отдела {department_id} успешно инициализирована.")
     except FileNotFoundError as e:
         print(f"Ошибка при загрузке документов: {e}")
         return False
@@ -240,24 +261,26 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
     try:
         print("Создание LLM...")
         llm = ChatOllama(model=llm_model_name)
-        chat = getChatChain(llm, db)
-        print("LLM успешно инициализирован.")
+        department_chat = getChatChain(llm, department_dbs[department_id])
+        department_chats[department_id] = department_chat
+        print(f"LLM для отдела {department_id} успешно инициализирован.")
     except Exception as e:
         print(f"Ошибка при создании LLM: {e}")
         return False
 
     return True
 
-def main(llm_model_name: str, embedding_model_name: str, documents_path: str, web_mode: bool = False, port: int = 8000) -> None:
+def main(llm_model_name: str, embedding_model_name: str, documents_path: str, department_id: str = "default", web_mode: bool = False, port: int = 8000) -> None:
     print("Запуск функции main...")  # Отладочное сообщение
     print(f"Инициализация с параметрами:")  # Отладочное сообщение
     print(f"  Модель: {llm_model_name}")  # Отладочное сообщение
     print(f"  Модель встраивания: {embedding_model_name}")  # Отладочное сообщение
     print(f"  Путь к документам: {documents_path}")  # Отладочное сообщение
+    print(f"  Отдел: {department_id}")  # Отладочное сообщение
     print(f"  Режим веб-сервера: {'включен' if web_mode else 'выключен'}")  # Отладочное сообщение
     print(f"  Порт: {port}")  # Отладочное сообщение
 
-    success = initialize_llm(llm_model_name, embedding_model_name, documents_path)
+    success = initialize_llm(llm_model_name, embedding_model_name, documents_path, department_id)
     
     if not success:
         print("Не удалось инициализировать LLM. Завершение работы.")
@@ -278,7 +301,7 @@ def main(llm_model_name: str, embedding_model_name: str, documents_path: str, we
                 if user_input.lower() == "exit":
                     break
                 else:
-                    chat(user_input)
+                    department_chats[department_id](user_input)
             
             except KeyboardInterrupt:
                 break
@@ -302,6 +325,12 @@ def parse_arguments() -> argparse.Namespace:
         "--path",
         default="Research",
         help="The path to the directory containing documents to load.",
+    )
+    parser.add_argument(
+        "-d",
+        "--department",
+        default="default",
+        help="The department ID to initialize the chat for.",
     )
     parser.add_argument(
         "-w",
@@ -858,6 +887,14 @@ async def delete_content(content_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Ошибка при удалении контента: {str(e)}")
+
+@app.get("/initialized-departments")
+async def get_initialized_departments():
+    """
+    Возвращает список отделов, для которых уже инициализированы модели LLM.
+    """
+    departments = list(department_chats.keys())
+    return {"departments": departments}
 
 if __name__ == "__main__":
     args = parse_arguments()
