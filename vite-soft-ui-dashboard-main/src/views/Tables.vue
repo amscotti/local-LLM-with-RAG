@@ -88,32 +88,41 @@
                       <input type="text" class="form-control" id="title" v-model="contentForm.title" required>
                     </div>
                     <div class="col-md-6 mb-3">
-                      <label for="file" class="form-label">Файл</label>
-                      <input type="file" class="form-control" id="file" @change="handleFileUpload" required>
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col-12 mb-3">
                       <label for="description" class="form-label">Описание</label>
                       <textarea class="form-control" id="description" rows="3" v-model="contentForm.description"></textarea>
                     </div>
                   </div>
                   <div class="row">
                     <div class="col-md-6 mb-3">
-                      <label for="content-department" class="form-label">Отдел</label>
-                      <select class="form-select" id="content-department" v-model="contentForm.department_id" required>
+                      <label for="department" class="form-label">Отдел</label>
+                      <select class="form-select" id="department" v-model="contentForm.department_id" required>
                         <option v-for="department in departments" :key="department.id" :value="department.id">
                           {{ department.department_name }}
                         </option>
                       </select>
                     </div>
                     <div class="col-md-6 mb-3">
-                      <label for="content-access" class="form-label">Уровень доступа</label>
-                      <select class="form-select" id="content-access" v-model="contentForm.access_level" required>
+                      <label for="access_level" class="form-label">Уровень доступа</label>
+                      <select class="form-select" id="access_level" v-model="contentForm.access_level" required>
                         <option v-for="access in accessLevels" :key="access.id" :value="access.id">
                           {{ access.access_name }}
                         </option>
                       </select>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
+                      <label for="tag" class="form-label">Тег</label>
+                      <select class="form-select" id="tag" v-model="contentForm.tag_id">
+                        <option value="">Без категории</option>
+                        <option v-for="tag in tags" :key="tag.id" :value="tag.id">
+                          {{ tag.tag_name }}
+                        </option>
+                      </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                      <label for="file" class="form-label">Файл</label>
+                      <input type="file" class="form-control" id="file" @change="handleFileUpload" required>
                     </div>
                   </div>
                   <button type="submit" class="btn bg-gradient-success">Загрузить</button>
@@ -207,6 +216,7 @@ export default {
         description: '',
         department_id: null,
         access_level: null,
+        tag_id: null,
         file: null
       },
       uploadMessage: '',
@@ -228,7 +238,8 @@ export default {
       departments: [],
       accessLevels: [],
       llmModels: [],
-      embeddingModels: []
+      embeddingModels: [],
+      tags: []
     };
   },
   async created() {
@@ -236,6 +247,7 @@ export default {
     await this.fetchAccessLevels();
     await this.fetchLLMModels();
     await this.fetchEmbeddingModels();
+    await this.fetchTags();
   },
   methods: {
     // Получение списка отделов
@@ -312,6 +324,16 @@ export default {
       }
     },
     
+    // Получение списка тегов
+    async fetchTags() {
+      try {
+        const response = await axios.get('http://192.168.81.149:8000/tags');
+        this.tags = response.data.tags;
+      } catch (error) {
+        console.error('Ошибка при получении тегов:', error);
+      }
+    },
+    
     // Регистрация пользователя
     async registerUser() {
       try {
@@ -364,7 +386,8 @@ export default {
           `http://192.168.81.149:8000/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
           `&description=${encodeURIComponent(this.contentForm.description)}` +
           `&access_id=${this.contentForm.access_level}` +
-          `&department_id=${this.contentForm.department_id}`,
+          `&department_id=${this.contentForm.department_id}` +
+          `&tag_id=${this.contentForm.tag_id || ''}`,
           formData,
           {
             headers: {
@@ -382,6 +405,7 @@ export default {
           description: '',
           department_id: null,
           access_level: null,
+          tag_id: null,
           file: null
         };
         
