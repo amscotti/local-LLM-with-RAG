@@ -28,7 +28,7 @@
                   <div class="folder-header" @click="toggleFolder('untagged')">
                     <i class="fas" :class="openFolders.includes('untagged') ? 'fa-folder-open' : 'fa-folder'"></i>
                     <span class="ms-2">Без категории</span>
-                    <span class="badge bg-primary rounded-pill ms-2">{{ contentData.untagged_content.length }}</span>
+                    <span class="badge bg-secondary rounded-pill ms-2">{{ contentData.untagged_content.length }}</span>
                   </div>
                   
                   <!-- Документы без тега -->
@@ -37,7 +37,7 @@
                       <i class="fas fa-file-alt"></i>
                       <span class="ms-2">{{ doc.title }}</span>
                       <p class="text-xs text-secondary mb-0">{{ doc.description }}</p>
-                      <button class="btn btn-sm btn-outline-primary ms-2" @click="viewDocument(doc)">
+                      <button class="btn btn-sm btn-outline-success ms-2" @click="viewDocument(doc)">
                         <i class="fas fa-eye"></i>
                       </button>
                       <button class="btn btn-sm btn-outline-secondary ms-1" @click="downloadDocument(doc)">
@@ -55,19 +55,18 @@
                   <div class="folder-header" @click="toggleFolder(tag.id)">
                     <i class="fas" :class="openFolders.includes(tag.id) ? 'fa-folder-open' : 'fa-folder'"></i>
                     <span class="ms-2">{{ tag.tag_name }}</span>
-                    <span class="badge bg-primary rounded-pill ms-2">{{ tag.content.length }}</span>
+                    <span class="badge bg-secondary rounded-pill ms-2">{{ tag.content.length }}</span>
                   </div>
                   
                   <!-- Документы с этим тегом -->
                   <div v-if="openFolders.includes(tag.id)" class="folder-content ms-4 mt-2">
                     <div v-for="doc in tag.content" :key="doc.id" class="document-item py-2">
                       <i class="fas fa-file-alt"></i>
-                      <span class="ms-2">{{ doc.title }}</span>
-                      <p class="text-xs text-secondary mb-0">{{ doc.description }}</p>
-                      <button class="btn btn-sm btn-outline-primary ms-2" @click="viewDocument(doc)">
+                      <span class="ms-2"><strong>{{ doc.title }}</strong> {{ doc.description }}</span>
+                      <button class="btn btn-sm btn-outline-secondary ms-3" @click="viewDocument(doc)">
                         <i class="fas fa-eye"></i>
                       </button>
-                      <button class="btn btn-sm btn-outline-secondary ms-1" @click="downloadDocument(doc)">
+                      <button class="btn btn-sm btn-outline-secondary ms-3" @click="downloadDocument(doc)">
                         <i class="fas fa-download"></i>
                       </button>
                     </div>
