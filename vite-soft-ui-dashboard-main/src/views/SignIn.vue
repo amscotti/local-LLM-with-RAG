@@ -124,6 +124,7 @@ export default {
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("userLogin", this.login);
         localStorage.setItem("userId", response.data.id);
+        localStorage.setItem("departmentId", response.data.department_id);
         
         // Перенаправляем на панель управления
         this.router.push("/dashboard");
