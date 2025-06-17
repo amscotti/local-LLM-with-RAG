@@ -133,7 +133,7 @@ export default {
     },
     viewDocument(doc) {
       // Открытие документа для просмотра
-      window.open(`http://192.168.81.149:8000/download-file/${doc.id}`, '_blank');
+      window.open(`http://192.168.81.149:8000/view-file/${doc.id}`, '_blank');
     },
     async downloadDocument(doc) {
       try {
