@@ -610,6 +610,22 @@ async def download_file(content_id: int, db: Session = Depends(get_db)):
     # Возвращаем файл как ответ
     return FileResponse(file_path, media_type='application/octet-stream', filename=os.path.basename(file_path))
 
+@app.get("/view-file/{content_id}")
+async def view_file(content_id: int, db: Session = Depends(get_db)):
+    # Получаем контент из базы данных по ID
+    content = db.query(Content).filter(Content.id == content_id).first()
+    if content is None:
+        raise HTTPException(status_code=404, detail="Контент не найден")
+
+    # Проверяем, существует ли файл
+    file_path = content.file_path
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Файл не найден")
+
+    # Возвращаем файл как ответ с заголовком для открытия в браузере
+    return FileResponse(file_path, media_type='application/pdf', filename=os.path.basename(file_path), headers={"Content-Disposition": "inline"})
+
+
 @app.get("/users")
 async def get_users(db: Session = Depends(get_db)):
     try:
