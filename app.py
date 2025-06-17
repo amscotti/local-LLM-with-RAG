@@ -19,6 +19,8 @@ from database import get_db
 
 from llm import getChatChain
 
+
+
 # Функция для проверки доступности модели
 def check_if_model_is_available(model_name: str):
     # Список доступных моделей, можно расширить по необходимости
