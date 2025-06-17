@@ -538,6 +538,14 @@ export default {
         const documentsPath = this.initializeForm.documents_path.trim();
         const departmentId = this.initializeForm.department_id.trim();
         
+        // Проверяем, что departmentId не пустой
+        if (!departmentId) {
+          this.initializeMessage = 'ID отдела не может быть пустым';
+          this.initializeStatus = false;
+          this.isInitializing = false;
+          return;
+        }
+        
         // Отладочная информация: выводим параметры, которые отправляем
         console.log('Отправляемые параметры:', {
           model_name: modelName,
@@ -546,8 +554,16 @@ export default {
           department_id: departmentId
         });
         
-        // Изменяем способ отправки данных с JSON в теле на query parameters в URL
-        const response = await axios.post(`http://192.168.81.149:8000/initialize?model_name=${encodeURIComponent(modelName)}&embedding_model_name=${encodeURIComponent(embeddingModelName)}&documents_path=${encodeURIComponent(documentsPath)}&department_id=${encodeURIComponent(departmentId)}`);
+        // Создаем объект данных для отправки в формате JSON
+        const requestData = {
+          model_name: modelName,
+          embedding_model_name: embeddingModelName,
+          documents_path: documentsPath,
+          department_id: departmentId
+        };
+        
+        // Отправляем запрос с JSON данными в теле запроса
+        const response = await axios.post('http://192.168.81.149:8000/initialize', requestData);
         
         this.initializeMessage = 'LLM успешно инициализирован!';
         this.initializeStatus = true;
@@ -555,7 +571,7 @@ export default {
         // Сбрасываем подтверждение
         this.initializeForm.confirm = false;
       } catch (error) {
-        this.initializeMessage = error.response?.data?.detail || 'Ошибка при инициализации LLM';
+        this.initializeMessage = 'Ошибка инициализации LLM: ' + (error.response?.data?.detail || error.message);
         this.initializeStatus = false;
         console.error('Ошибка инициализации LLM:', error);
       } finally {
