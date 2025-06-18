@@ -339,7 +339,7 @@
                                 <label class="form-label">Варианты ответов</label>
                               </div>
                             </div>
-                            <div v-for="(option, optIndex) in question.options" :key="optIndex" class="row mb-2">
+                            <div v-for="(option, optIndex) in question.options || []" :key="optIndex" class="row mb-2">
                               <div class="col-md-6">
                                 <div class="input-group">
                                   <input type="text" class="form-control" v-model="option.text" placeholder="Вариант ответа" required>
@@ -516,7 +516,7 @@
                                   <div v-if="question.question_type === 'single_choice' || question.question_type === 'multiple_choice'">
                                     <p><strong>Варианты ответов:</strong></p>
                                     <ul class="list-group">
-                                      <li v-for="option in question.options" :key="option.id" class="list-group-item" :class="{ 'list-group-item-success': isCorrectOption(question, option.id) }">
+                                      <li v-for="option in question.options || []" :key="option.id" class="list-group-item" :class="{ 'list-group-item-success': isCorrectOption(question, option.id) }">
                                         {{ option.text }}
                                         <span v-if="isCorrectOption(question, option.id)" class="badge bg-success ms-2">Правильный</span>
                                       </li>
@@ -850,6 +850,12 @@ export default {
       },
       selectedAttempt: null,
       loadingAttemptDetails: false,
+      attemptDetailsError: '',
+      resultsUserId: '',
+      
+      // Модальные окна
+      quizDetailsModal: null,
+      attemptDetailsModal: null,
       
       // Список пользователей
       users: []
@@ -1172,7 +1178,28 @@ export default {
     // Создание нового теста/анкеты
     async createQuiz() {
       try {
-        const response = await axios.post('http://192.168.81.149:8000/quiz/create', this.quizForm);
+        // Подготовка данных перед отправкой
+        const quizData = JSON.parse(JSON.stringify(this.quizForm));
+        
+        // Обработка правильных ответов для разных типов вопросов
+        quizData.questions.forEach(question => {
+          // Для одиночного выбора - преобразуем строку в число
+          if (question.question_type === 'single_choice' && question.correct_answer) {
+            question.correct_answer = parseInt(question.correct_answer);
+          }
+          
+          // Для множественного выбора - преобразуем массив строк в массив чисел
+          if (question.question_type === 'multiple_choice' && Array.isArray(question.correct_answer)) {
+            question.correct_answer = question.correct_answer.map(id => parseInt(id));
+          }
+          
+          // Проверяем, что у вопроса есть options
+          if (!question.options) {
+            question.options = [];
+          }
+        });
+        
+        const response = await axios.post('http://192.168.81.149:8000/quiz/create', quizData);
         this.quizMessage = 'Тест/анкета успешно создана!';
         this.quizStatus = true;
         
@@ -1189,9 +1216,9 @@ export default {
         // Обновляем список тестов/анкет
         await this.fetchQuizzes();
       } catch (error) {
+        console.error('Ошибка создания теста/анкеты:', error);
         this.quizMessage = error.response?.data?.detail || 'Ошибка при создании теста/анкеты';
         this.quizStatus = false;
-        console.error('Ошибка создания теста/анкеты:', error);
       }
     },
     
@@ -1335,14 +1362,15 @@ export default {
     
     // Методы для работы с вопросами и вариантами ответов
     addQuestion() {
+      const newQuestionId = Date.now(); // Уникальный ID для нового вопроса в рамках текущей сессии
       this.quizForm.questions.push({
         text: '',
         question_type: 'single_choice',
         options: [
-          { id: 1, text: '' },
-          { id: 2, text: '' }
+          { id: newQuestionId + 1, text: '' },
+          { id: newQuestionId + 2, text: '' }
         ],
-        correct_answer: '',
+        correct_answer: '',  // Для single_choice используем строку
         order: this.quizForm.questions.length + 1
       });
     },
@@ -1352,15 +1380,17 @@ export default {
     },
     
     addOption(question) {
+      // Генерируем уникальный ID для нового варианта
       const newId = question.options.length > 0 
         ? Math.max(...question.options.map(o => o.id)) + 1 
-        : 1;
+        : Date.now();
       
       question.options.push({
         id: newId,
         text: ''
       });
       
+      // Инициализируем correct_answer как массив для multiple_choice
       if (question.question_type === 'multiple_choice' && !Array.isArray(question.correct_answer)) {
         question.correct_answer = [];
       }
@@ -1383,7 +1413,8 @@ export default {
     handleQuestionTypeChange(question) {
       // Сбрасываем правильный ответ при изменении типа вопроса
       if (question.question_type === 'single_choice') {
-        question.correct_answer = '';
+        question.correct_answer = question.options && question.options.length > 0 ? 
+          String(question.options[0].id) : '';
       } else if (question.question_type === 'multiple_choice') {
         question.correct_answer = [];
       } else if (question.question_type === 'text') {
@@ -1391,10 +1422,11 @@ export default {
       }
       
       // Если тип вопроса не предполагает варианты, но они есть, сохраняем их на всякий случай
-      if (question.question_type === 'text' && (!question.options || question.options.length === 0)) {
+      if (question.options === undefined || question.options === null) {
+        const newOptionId = Date.now();
         question.options = [
-          { id: 1, text: '' },
-          { id: 2, text: '' }
+          { id: newOptionId + 1, text: '' },
+          { id: newOptionId + 2, text: '' }
         ];
       }
     },
@@ -1421,34 +1453,45 @@ export default {
       if (!question.correct_answer) return false;
       
       if (question.question_type === 'single_choice') {
-        // Преобразуем к строке для корректного сравнения
-        return String(question.correct_answer) === String(optionId);
+        // Обрабатываем как число или строку
+        const correctAnswer = typeof question.correct_answer === 'number' ? 
+          question.correct_answer : parseInt(question.correct_answer);
+        return correctAnswer === optionId;
       } else if (question.question_type === 'multiple_choice' && Array.isArray(question.correct_answer)) {
-        // Преобразуем к строке для корректного сравнения
-        return question.correct_answer.map(String).includes(String(optionId));
+        // Проверяем наличие ID в массиве правильных ответов
+        return question.correct_answer.some(id => {
+          const correctId = typeof id === 'string' ? parseInt(id) : id;
+          return correctId === optionId;
+        });
       }
       
       return false;
     },
     
     getQuestionText(questionId) {
-      if (!this.selectedQuiz) return '';
+      if (!this.selectedQuiz || !this.selectedQuiz.questions) return '';
       
       const question = this.selectedQuiz.questions.find(q => q.id === questionId);
       return question ? question.text : '';
     },
     
     getCorrectAnswerText(questionId) {
-      if (!this.selectedQuiz) return '';
+      if (!this.selectedQuiz || !this.selectedQuiz.questions) return '';
       
       const question = this.selectedQuiz.questions.find(q => q.id === questionId);
       if (!question || !question.correct_answer) return '';
       
       if (question.question_type === 'single_choice') {
-        const option = question.options.find(o => o.id === question.correct_answer);
+        const correctId = typeof question.correct_answer === 'string' ? 
+          parseInt(question.correct_answer) : question.correct_answer;
+        const option = (question.options || []).find(o => o.id === correctId);
         return option ? option.text : '';
       } else if (question.question_type === 'multiple_choice' && Array.isArray(question.correct_answer)) {
-        const selectedOptions = question.options.filter(o => question.correct_answer.includes(o.id));
+        // Преобразуем IDs в числа для корректного сравнения
+        const correctIds = question.correct_answer.map(id => 
+          typeof id === 'string' ? parseInt(id) : id);
+        const selectedOptions = (question.options || []).filter(o => 
+          correctIds.includes(o.id));
         return selectedOptions.map(o => o.text).join(', ');
       }
       
@@ -1458,14 +1501,22 @@ export default {
     formatAnswerText(answer) {
       if (!answer || !answer.answer) return '-';
       
+      if (!this.selectedQuiz || !this.selectedQuiz.questions) return String(answer.answer);
+      
       const question = this.selectedQuiz.questions.find(q => q.id === answer.question_id);
       if (!question) return JSON.stringify(answer.answer);
       
       if (question.question_type === 'single_choice') {
-        const option = question.options.find(o => o.id === answer.answer);
+        const answerId = typeof answer.answer === 'string' ? 
+          parseInt(answer.answer) : answer.answer;
+        const option = (question.options || []).find(o => o.id === answerId);
         return option ? option.text : answer.answer;
       } else if (question.question_type === 'multiple_choice' && Array.isArray(answer.answer)) {
-        const selectedOptions = question.options.filter(o => answer.answer.includes(o.id));
+        // Преобразуем IDs в числа для корректного сравнения
+        const answerIds = answer.answer.map(id => 
+          typeof id === 'string' ? parseInt(id) : id);
+        const selectedOptions = (question.options || []).filter(o => 
+          answerIds.includes(o.id));
         return selectedOptions.map(o => o.text).join(', ');
       }
       
