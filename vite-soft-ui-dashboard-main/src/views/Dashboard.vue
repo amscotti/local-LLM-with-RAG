@@ -43,6 +43,14 @@
                       <button class="btn btn-sm btn-outline-secondary ms-1" @click="downloadDocument(doc)">
                         <i class="fas fa-download"></i>
                       </button>
+                      <!-- Кнопка "Поделиться" для копирования ссылки на просмотр -->
+                      <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'view')">
+                        <i class="fas fa-share-alt"></i> Поделиться
+                      </button>
+                      <!-- Кнопка "Поделиться" для копирования ссылки на скачивание -->
+                      <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'download')">
+                        <i class="fas fa-share-alt"></i> Поделиться
+                      </button>
                     </div>
                     <div v-if="contentData.untagged_content.length === 0" class="text-muted">
                       Нет документов в этой папке
@@ -68,6 +76,14 @@
                       </button>
                       <button class="btn btn-sm btn-outline-secondary ms-3" @click="downloadDocument(doc)">
                         <i class="fas fa-download"></i>
+                      </button>
+                      <!-- Кнопка "Поделиться" для копирования ссылки на просмотр -->
+                      <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'view')">
+                        <i class="fas fa-share-alt"></i> Поделиться
+                      </button>
+                      <!-- Кнопка "Поделиться" для копирования ссылки на скачивание -->
+                      <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'download')">
+                        <i class="fas fa-share-alt"></i> Поделиться
                       </button>
                     </div>
                     <div v-if="tag.content.length === 0" class="text-muted">
@@ -140,6 +156,32 @@ export default {
         window.location.href = `http://192.168.81.149:8000/download-file/${doc.id}`;
       } catch (error) {
         console.error("Ошибка при скачивании документа:", error);
+      }
+    },
+    copyLink(docId, action) {
+      const url = action === 'view' 
+        ? `http://192.168.81.149:8000/view-file/${docId}` 
+        : `http://192.168.81.149:8000/download-file/${docId}`;
+      
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          alert('Ссылка скопирована в буфер обмена!');
+        }).catch(err => {
+          console.error('Ошибка при копировании ссылки:', err);
+        });
+      } else {
+        // Альтернативный метод копирования для старых браузеров
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          alert('Ссылка скопирована в буфер обмена!');
+        } catch (err) {
+          console.error('Ошибка при копировании ссылки:', err);
+        }
+        document.body.removeChild(textarea);
       }
     }
   }
