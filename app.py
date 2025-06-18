@@ -624,8 +624,24 @@ async def view_file(content_id: int, db: Session = Depends(get_db)):
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Файл не найден")
 
+    # Определяем тип файла на основе расширения
+    file_extension = os.path.splitext(file_path)[1].lower()
+    
+    # Устанавливаем соответствующий media_type в зависимости от расширения файла
+    if file_extension in ['.pdf']:
+        media_type = 'application/pdf'
+    elif file_extension in ['.mp3', '.wav', '.ogg']:
+        media_type = f'audio/{file_extension[1:]}'
+    elif file_extension in ['.mp4', '.webm', '.avi', '.mov']:
+        media_type = f'video/{file_extension[1:]}'
+    elif file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
+        media_type = f'image/{file_extension[1:]}'
+    else:
+        # Для других типов файлов используем общий тип
+        media_type = 'application/octet-stream'
+
     # Возвращаем файл как ответ с заголовком для открытия в браузере
-    return FileResponse(file_path, media_type='application/pdf', filename=os.path.basename(file_path), headers={"Content-Disposition": "inline"})
+    return FileResponse(file_path, media_type=media_type, filename=os.path.basename(file_path), headers={"Content-Disposition": "inline"})
 
 
 @app.get("/users")
