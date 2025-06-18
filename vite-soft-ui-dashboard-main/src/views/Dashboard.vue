@@ -142,15 +142,22 @@
         </div>
       </div>
     </div>
+
+    <!-- Добавляем компонент для тестов и анкет -->
+    <QuizTable />
   </div>
 </template>
 
 <script>
 import axios from 'axios';
 import { Modal } from 'bootstrap';
+import QuizTable from './components/QuizTable.vue';
 
 export default {
   name: "DashboardDefault",
+  components: {
+    QuizTable
+  },
   data() {
     return {
       userId: localStorage.getItem("userId"),
