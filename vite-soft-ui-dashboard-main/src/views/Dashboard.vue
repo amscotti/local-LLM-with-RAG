@@ -79,11 +79,11 @@
                       </button>
                       <!-- Кнопка "Поделиться" для копирования ссылки на просмотр -->
                       <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'view')">
-                        <i class="fas fa-share-alt"></i> Поделиться
+                        <i class="fas fa-share-alt"></i> Просмотр
                       </button>
                       <!-- Кнопка "Поделиться" для копирования ссылки на скачивание -->
                       <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'download')">
-                        <i class="fas fa-share-alt"></i> Поделиться
+                        <i class="fas fa-share-alt"></i> Скачать
                       </button>
                     </div>
                     <div v-if="tag.content.length === 0" class="text-muted">
