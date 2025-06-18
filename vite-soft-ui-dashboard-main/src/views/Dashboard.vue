@@ -47,15 +47,12 @@
                         <i class="fas fa-download"></i>
                       </button>
                       <div class="dropdown ms-1">
-                        <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" id="shareDropdown"
-                          data-bs-toggle="dropdown" aria-expanded="false">
-                          <i class="fas fa-share-alt"></i> Поделиться
+                        <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'view')">
+                          <i class="fas fa-share-alt"></i> Просмотр
                         </button>
-                        <ul class="dropdown-menu" aria-labelledby="shareDropdown">
-                          <li><a class="dropdown-item" @click="copyLink(doc.id, 'view')">Ссылка на просмотр</a></li>
-                          <li><a class="dropdown-item" @click="copyLink(doc.id, 'download')">Ссылка на скачивание</a>
-                          </li>
-                        </ul>
+                        <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'download')">
+                          <i class="fas fa-share-alt"></i> Скачать
+                        </button>
                       </div>
                     </div>
                     <div v-if="contentData.untagged_content.length === 0" class="text-muted">
