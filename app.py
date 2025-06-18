@@ -1,9 +1,9 @@
 from langchain_ollama import ChatOllama, OllamaEmbeddings
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query
 from pydantic import BaseModel
 import uvicorn
 import os
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text, inspect, or_
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
@@ -913,6 +913,80 @@ async def get_initialized_departments():
     """
     departments = list(department_chats.keys())
     return {"departments": departments}
+
+@app.get("/search-documents")
+async def search_documents(
+    user_id: int,
+    search_query: str = Query(None, description="Поисковый запрос для названия, описания или имени файла"),
+    db: Session = Depends(get_db)
+):
+    try:
+        # Получаем пользователя по user_id для проверки прав доступа
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        
+        # Базовый запрос с учетом прав доступа пользователя
+        query = db.query(Content).filter(
+            Content.access_level == user.access_id,
+            Content.department_id == user.department_id
+        )
+        
+        # Если указан поисковый запрос, добавляем условия поиска
+        if search_query:
+            # Получаем имя файла из пути
+            query = query.filter(
+                or_(
+                    Content.title.ilike(f"%{search_query}%"),  # Поиск по названию
+                    Content.description.ilike(f"%{search_query}%"),  # Поиск по описанию
+                    Content.file_path.ilike(f"%{search_query}%")  # Поиск по пути файла (включая имя файла)
+                )
+            )
+        
+        # Выполняем запрос
+        contents = query.all()
+        
+        # Если контент не найден, возвращаем пустой список
+        if not contents:
+            return {"documents": []}
+        
+        # Формируем результат
+        result = []
+        for content in contents:
+            # Получаем имя файла из пути
+            file_name = os.path.basename(content.file_path) if content.file_path else "Имя файла недоступно"
+            
+            # Получаем название отдела
+            department = db.query(Department).filter(Department.id == content.department_id).first()
+            department_name = department.department_name if department else "Неизвестный отдел"
+            
+            # Получаем название уровня доступа
+            access = db.query(Access).filter(Access.id == content.access_level).first()
+            access_name = access.access_name if access else "Неизвестный уровень"
+            
+            # Получаем название тега, если он есть
+            tag_name = None
+            if content.tag_id:
+                tag = db.query(Tag).filter(Tag.id == content.tag_id).first()
+                tag_name = tag.tag_name if tag else None
+            
+            result.append({
+                "id": content.id,
+                "title": content.title,
+                "description": content.description,
+                "file_path": content.file_path,
+                "file_name": file_name,
+                "department_id": content.department_id,
+                "department_name": department_name,
+                "access_level": content.access_level,
+                "access_name": access_name,
+                "tag_id": content.tag_id,
+                "tag_name": tag_name
+            })
+        
+        return {"documents": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при поиске документов: {str(e)}")
 
 if __name__ == "__main__":
     args = parse_arguments()
