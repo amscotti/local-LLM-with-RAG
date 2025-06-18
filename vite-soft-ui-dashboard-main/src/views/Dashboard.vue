@@ -15,12 +15,12 @@
                 </div>
                 <p class="mt-2">Загрузка данных...</p>
               </div>
-              
+
               <!-- Сообщение об ошибке -->
               <div v-else-if="error" class="alert alert-danger">
                 {{ error }}
               </div>
-              
+
               <!-- Древовидная структура папок на основе тегов -->
               <div v-else>
                 <!-- Папка "Без категории" для документов без тега -->
@@ -30,34 +30,40 @@
                     <span class="ms-2">Без категории</span>
                     <span class="badge bg-secondary rounded-pill ms-2">{{ contentData.untagged_content.length }}</span>
                   </div>
-                  
+
                   <!-- Документы без тега -->
                   <div v-if="openFolders.includes('untagged')" class="folder-content ms-4 mt-2">
                     <div v-for="doc in contentData.untagged_content" :key="doc.id" class="document-item py-2">
-                      <i class="fas fa-file-alt"></i>
-                      <span class="ms-2">{{ doc.title }}</span>
-                      <p class="text-xs text-secondary mb-0">{{ doc.description }}</p>
+                      <i :class="getFileIconClass(doc.file_path)"></i>
+                      <span class="ms-2 fixed-text-container">
+                        {{ doc.title || 'Без названия' }} -
+                        {{ doc.description || 'Нет описания' }} -
+                        {{ getFileName(doc.file_path) }}
+                      </span>
                       <button class="btn btn-sm btn-outline-success ms-2" @click="viewDocument(doc)">
                         <i class="fas fa-eye"></i>
                       </button>
                       <button class="btn btn-sm btn-outline-secondary ms-1" @click="downloadDocument(doc)">
                         <i class="fas fa-download"></i>
                       </button>
-                      <!-- Кнопка "Поделиться" для копирования ссылки на просмотр -->
-                      <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'view')">
-                        <i class="fas fa-share-alt"></i> Поделиться
-                      </button>
-                      <!-- Кнопка "Поделиться" для копирования ссылки на скачивание -->
-                      <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'download')">
-                        <i class="fas fa-share-alt"></i> Поделиться
-                      </button>
+                      <div class="dropdown ms-1">
+                        <button class="btn btn-sm btn-outline-info dropdown-toggle" type="button" id="shareDropdown"
+                          data-bs-toggle="dropdown" aria-expanded="false">
+                          <i class="fas fa-share-alt"></i> Поделиться
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="shareDropdown">
+                          <li><a class="dropdown-item" @click="copyLink(doc.id, 'view')">Ссылка на просмотр</a></li>
+                          <li><a class="dropdown-item" @click="copyLink(doc.id, 'download')">Ссылка на скачивание</a>
+                          </li>
+                        </ul>
+                      </div>
                     </div>
                     <div v-if="contentData.untagged_content.length === 0" class="text-muted">
                       Нет документов в этой папке
                     </div>
                   </div>
                 </div>
-                
+
                 <!-- Папки на основе тегов -->
                 <div v-for="tag in contentData.tags" :key="tag.id" class="folder-item">
                   <div class="folder-header" @click="toggleFolder(tag.id)">
@@ -65,26 +71,30 @@
                     <span class="ms-2">{{ tag.tag_name }}</span>
                     <span class="badge bg-secondary rounded-pill ms-2">{{ tag.content.length }}</span>
                   </div>
-                  
+
                   <!-- Документы с этим тегом -->
                   <div v-if="openFolders.includes(tag.id)" class="folder-content ms-4 mt-2">
                     <div v-for="doc in tag.content" :key="doc.id" class="document-item py-2">
-                      <i class="fas fa-file-alt"></i>
-                      <span class="ms-2"><strong>{{ doc.title }}</strong> {{ doc.description }}</span>
+                      <i :class="getFileIconClass(doc.file_path)"></i>
+                      <span class="ms-2 fixed-text-container">
+                        {{ doc.title || 'Без названия' }} -
+                        {{ doc.description || 'Нет описания' }} -
+                        {{ getFileName(doc.file_path) }}
+                      </span>
                       <button class="btn btn-sm btn-outline-secondary ms-3" @click="viewDocument(doc)">
                         <i class="fas fa-eye"></i>
                       </button>
                       <button class="btn btn-sm btn-outline-secondary ms-3" @click="downloadDocument(doc)">
                         <i class="fas fa-download"></i>
                       </button>
-                      <!-- Кнопка "Поделиться" для копирования ссылки на просмотр -->
-                      <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'view')">
-                        <i class="fas fa-share-alt"></i> Просмотр
-                      </button>
-                      <!-- Кнопка "Поделиться" для копирования ссылки на скачивание -->
-                      <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'download')">
-                        <i class="fas fa-share-alt"></i> Скачать
-                      </button>
+                      <div class="dropdown ms-1">
+                        <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'view')">
+                          <i class="fas fa-share-alt"></i> Просмотр
+                        </button>
+                        <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'download')">
+                          <i class="fas fa-share-alt"></i> Скачать
+                        </button>
+                      </div>
                     </div>
                     <div v-if="tag.content.length === 0" class="text-muted">
                       Нет документов в этой папке
@@ -131,13 +141,29 @@ export default {
         this.loading = true;
         const response = await axios.get(`http://192.168.81.149:8000/user/${this.userId}/content/by-tags`);
         this.contentData = response.data;
-        console.log('Content by tags:', this.contentData);
+
+        // Отладка: выводим полученные данные о контенте
+        console.log('Полученные данные о контенте:', this.contentData);
+
+        // Выводим информацию о каждом документе
+        this.contentData.untagged_content.forEach(doc => {
+          console.log(`Документ: ${doc.title}, Описание: ${doc.description}, Путь к файлу: ${doc.file_path}, Имя файла: ${this.getFileName(doc.file_path)}`);
+        });
+
         this.loading = false;
       } catch (error) {
         console.error("Ошибка при получении контента:", error);
         this.error = "Произошла ошибка при загрузке данных";
         this.loading = false;
       }
+    },
+    // Метод для получения имени файла из пути
+    getFileName(filePath) {
+      if (!filePath) return 'Имя файла недоступно';
+      
+      // Разделяем путь по слешам и берем последний элемент
+      const parts = filePath.split(/[\/\\]/); // Разделяем по / или \
+      return parts[parts.length - 1];
     },
     toggleFolder(folderId) {
       if (this.openFolders.includes(folderId)) {
@@ -182,6 +208,24 @@ export default {
           console.error('Ошибка при копировании ссылки:', err);
         }
         document.body.removeChild(textarea);
+      }
+    },
+    getFileIconClass(filePath) {
+      const extension = filePath.split('.').pop().toLowerCase();
+      switch (extension) {
+        case 'pdf':
+          return 'fas fa-file-pdf '; // Красный для PDF
+        case 'doc':
+        case 'docx':
+          return 'fas fa-file-word '; // Синий для Word
+        case 'xls':
+        case 'xlsx':
+          return 'fas fa-file-excel'; // Зеленый для Excel
+        case 'ppt':
+        case 'pptx':
+          return 'fas fa-file-powerpoint text-warning'; // Желтый для PowerPoint
+        default:
+          return 'fas fa-file-alt text-secondary'; // Серый для других форматов
       }
     }
   }
@@ -228,11 +272,30 @@ export default {
   color: #ffc107;
 }
 
-.fa-file-alt {
-  color: #4caf50;
+.fa-file-pdf {
+  color: rgb(204,20,20);
+}
+
+.fa-file-word {
+  color: rgb(28,102,228);
+}
+
+.fa-file-powerpoint {
+  color: rgb(217,101,72);
+}
+
+.fa-file-excel {
+  color: rgb(35,148,94);
 }
 
 .badge {
   font-size: 0.65em;
+}
+
+.fixed-text-container {
+  width: 60rem; /* Установите фиксированную ширину */
+  overflow: hidden; /* Скрыть переполнение */
+  text-overflow: ellipsis; /* Добавить многоточие для длинного текста */
+  white-space: nowrap; /* Запретить перенос строк */
 }
 </style>
