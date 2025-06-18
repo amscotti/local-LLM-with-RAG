@@ -18,6 +18,7 @@ import sys
 from database import get_db
 
 from llm import getChatChain
+from quiz import router as quiz_router
 
 
 
@@ -56,6 +57,9 @@ def get_available_models():
 
 # Инициализация глобальных переменных
 app = FastAPI()
+# Добавляем маршрутизатор для тестов и анкет
+app.include_router(quiz_router)
+
 # Словари для хранения экземпляров чатов и баз данных для каждого отдела
 department_chats = {}  # {department_id: chat_instance}
 department_dbs = {}    # {department_id: db_instance}
