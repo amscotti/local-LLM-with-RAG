@@ -57,36 +57,43 @@ async def upload_content(
 
     return {"message": "Контент успешно загружен"}
 
-@router.put("/content/{content_id}")
+# Модель для обновления контента
+class ContentUpdate(BaseModel):
+    title: str = None
+    description: str = None
+    access_id: int = None
+    department_id: int = None
+    tag_id: int = None
+
+@router.put("/{content_id}")
 async def update_content(
     content_id: int,
-    title: str = None,
-    description: str = None,
-    access_id: int = None,
-    department_id: int = None,
-    tag_id: int = None,
+    content_data: ContentUpdate,
     db: Session = Depends(get_db)
 ):
+    # Отладочный вывод входных параметров
+    print(f"Получены параметры: content_id={content_id}, data={content_data}")
+    
     # Получаем контент из базы данных по ID
     content = db.query(Content).filter(Content.id == content_id).first()
     if content is None:
         raise HTTPException(status_code=404, detail="Контент не найден")
 
     # Обновляем поля, если они были переданы
-    if title is not None:
-        content.title = title
-    if description is not None:
-        content.description = description
-    if access_id is not None:
+    if content_data.title is not None:
+        content.title = content_data.title
+    if content_data.description is not None:
+        content.description = content_data.description
+    if content_data.access_id is not None:
         # Проверка существования уровня доступа
-        access = db.query(Access).filter(Access.id == access_id).first()
+        access = db.query(Access).filter(Access.id == content_data.access_id).first()
         if access is None:
             raise HTTPException(status_code=400, detail="Уровень доступа не найден")
-        content.access_level = access_id
-    if department_id is not None:
-        content.department_id = department_id
-    if tag_id is not None:
-        content.tag_id = tag_id
+        content.access_level = content_data.access_id
+    if content_data.department_id is not None:
+        content.department_id = content_data.department_id
+    if content_data.tag_id is not None:
+        content.tag_id = content_data.tag_id
 
     db.commit()
     db.refresh(content)

@@ -209,7 +209,7 @@
                     </div>
                     <div class="col-md-6 mb-3">
                       <label for="edit-description" class="form-label">Описание</label>
-                      <textarea class="form-control" id="edit-description" rows="3" v-model="editForm.description"></textarea>
+                      <textarea class="form-control" id="edit-description" rows="3" v-model="editForm.description" required></textarea>
                     </div>
                   </div>
                   <div class="row">
@@ -902,7 +902,7 @@ export default {
     // Получение списка моделей LLM
     async fetchLLMModels() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/models/llm');
+        const response = await axios.get('http://192.168.81.149:8000/llm/models/llm');
         if (response.data && response.data.models) {
           this.llmModels = response.data.models;
         } else {
@@ -929,7 +929,7 @@ export default {
     // Получение списка моделей эмбеддингов
     async fetchEmbeddingModels() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/models/embedding');
+        const response = await axios.get('http://192.168.81.149:8000/llm/models/embedding');
         if (response.data && response.data.models) {
           this.embeddingModels = response.data.models;
         } else {
@@ -975,7 +975,7 @@ export default {
     // Регистрация пользователя
     async registerUser() {
       try {
-        const response = await axios.post('http://192.168.81.149:8000/register', this.registerForm);
+        const response = await axios.post('http://192.168.81.149:8000/user/register', this.registerForm);
         this.registerMessage = 'Пользователь успешно зарегистрирован!';
         this.registerStatus = true;
         
@@ -1021,7 +1021,7 @@ export default {
         
         // Отправляем запрос с параметрами в URL-строке
         const response = await axios.post(
-          `http://192.168.81.149:8000/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
+          `http://192.168.81.149:8000/content/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
           `&description=${encodeURIComponent(this.contentForm.description)}` +
           `&access_id=${this.contentForm.access_level}` +
           `&department_id=${this.contentForm.department_id}` +
@@ -1107,7 +1107,7 @@ export default {
         };
         
         // Отправляем запрос с JSON данными в теле запроса
-        const response = await axios.post('http://192.168.81.149:8000/initialize', requestData);
+        const response = await axios.post('http://192.168.81.149:8000/llm/initialize', requestData);
         
         this.initializeMessage = 'LLM успешно инициализирован!';
         this.initializeStatus = true;
@@ -1128,7 +1128,8 @@ export default {
       if (!this.editForm.id) return;
       
       try {
-        const response = await axios.get(`http://192.168.81.149:8000/content/${this.editForm.id}`);
+        // Используем правильный путь к эндпоинту для получения контента
+        const response = await axios.get(`http://192.168.81.149:8000/content/content/${this.editForm.id}`);
         const content = response.data;
         
         this.editForm = {
@@ -1149,13 +1150,22 @@ export default {
     // Редактирование контента
     async editContent() {
       try {
-        const response = await axios.put(`http://192.168.81.149:8000/content/${this.editForm.id}`, {
+        // Отладка: выводим данные, которые отправляем
+        const requestData = {
           title: this.editForm.title,
           description: this.editForm.description,
           access_id: this.editForm.access_level,
           department_id: this.editForm.department_id,
           tag_id: this.editForm.tag_id
-        });
+        };
+        console.log('Отправляемые данные для редактирования:', requestData);
+        console.log('URL запроса:', `http://192.168.81.149:8000/content/${this.editForm.id}`);
+        
+        // Исправляем URL для соответствия эндпоинту в content_routes.py
+        const response = await axios.put(`http://192.168.81.149:8000/content/${this.editForm.id}`, requestData);
+        
+        // Отладка: выводим ответ сервера
+        console.log('Ответ сервера:', response.data);
         
         this.editMessage = 'Контент успешно отредактирован!';
         this.editStatus = true;
@@ -1172,6 +1182,12 @@ export default {
         this.editMessage = error.response?.data?.detail || 'Ошибка при редактировании контента';
         this.editStatus = false;
         console.error('Ошибка редактирования контента:', error);
+        // Отладка: выводим подробную информацию об ошибке
+        if (error.response) {
+          console.error('Статус ошибки:', error.response.status);
+          console.error('Данные ошибки:', error.response.data);
+          console.error('Заголовки ответа:', error.response.headers);
+        }
       }
     },
     
