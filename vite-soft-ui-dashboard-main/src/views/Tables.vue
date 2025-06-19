@@ -916,7 +916,7 @@ export default {
     // Получение списка всего контента
     async fetchAllContent() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/content/content/all');
+        const response = await axios.get('http://192.168.81.149:8000/content/all');
         this.contentList = response.data;
       } catch (error) {
         console.error('Ошибка при получении списка контента:', error);
