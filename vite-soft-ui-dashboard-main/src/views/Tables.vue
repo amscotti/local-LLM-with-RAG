@@ -137,54 +137,10 @@
                   </div>
                 </form>
               </div>
-              
               <!-- Вкладка инициализации LLM -->
               <div class="tab-pane fade" id="initialize" role="tabpanel" aria-labelledby="initialize-tab">
-                <form @submit.prevent="initializeLLM">
-                  <div class="row">
-                    <div class="col-md-6 mb-3">
-                      <label for="model-name" class="form-label">Модель LLM</label>
-                      <input type="text" class="form-control" id="model-name" v-model="initializeForm.model_name" required placeholder="Введите модель LLM">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                      <label for="embedding-model" class="form-label">Модель эмбеддингов</label>
-                      <input type="text" class="form-control" id="embedding-model" v-model="initializeForm.embedding_model_name" required placeholder="Введите модель эмбеддингов">
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col-12 mb-3">
-                      <label for="documents-path" class="form-label">Путь к документам</label>
-                      <input type="text" class="form-control" id="documents-path" v-model="initializeForm.documents_path" placeholder="Например: Research" required>
-                      <small class="text-muted">Укажите путь к директории с документами для индексации</small>
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col-12 mb-3">
-                      <label for="department-id" class="form-label">Идентификатор отдела</label>
-                      <input type="text" class="form-control" id="department-id" v-model="initializeForm.department_id" required placeholder="Введите идентификатор отдела">
-                      <small class="text-muted">Укажите идентификатор отдела для создания уникальной базы данных</small>
-                    </div>
-                  </div>
-                  <div class="row mb-3">
-                    <div class="col-12">
-                      <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="confirm-init" v-model="initializeForm.confirm">
-                        <label class="form-check-label" for="confirm-init">
-                          Я подтверждаю, что хочу инициализировать LLM. Это может занять некоторое время.
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                  <button type="submit" class="btn bg-gradient-success" :disabled="!initializeForm.confirm || isInitializing">
-                    <span v-if="isInitializing" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    {{ isInitializing ? 'Инициализация...' : 'Инициализировать LLM' }}
-                  </button>
-                  <div v-if="initializeMessage" :class="['alert', initializeStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
-                    {{ initializeMessage }}
-                  </div>
-                </form>
+                <InitializationTable />
               </div>
-              
               <!-- Вкладка редактирования контента -->
               <div class="tab-pane fade" id="edit" role="tabpanel" aria-labelledby="edit-tab">
                 <div class="row mb-4">
@@ -534,7 +490,6 @@
                       </div>
                     </div>
                   </div>
-                  
                   <!-- Результаты тестов/анкет -->
                   <div class="tab-pane fade" id="quiz-results" role="tabpanel" aria-labelledby="quiz-results-tab">
                     <div class="row mb-3">
@@ -743,6 +698,7 @@
 <script>
 import AuthorsTable from "./components/AuthorsTable.vue";
 import ContentTable from "./components/ContentTable.vue";
+import InitializationTable from "./components/InitializationTable.vue";
 import axios from 'axios';
 import * as bootstrap from 'bootstrap';
 
@@ -751,6 +707,7 @@ export default {
   components: {
     AuthorsTable,
     ContentTable,
+    InitializationTable,
   },
   data() {
     return {
@@ -776,18 +733,6 @@ export default {
       },
       uploadMessage: '',
       uploadStatus: false,
-      
-      // Форма инициализации LLM
-      initializeForm: {
-        model_name: '',
-        embedding_model_name: '',
-        documents_path: 'Research',
-        confirm: false,
-        department_id: null
-      },
-      initializeMessage: '',
-      initializeStatus: false,
-      isInitializing: false,
       
       // Списки для выпадающих меню
       departments: [],
@@ -964,7 +909,7 @@ export default {
     // Получение списка всего контента
     async fetchAllContent() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/content/all');
+        const response = await axios.get('http://192.168.81.149:8000/content/content/all');
         this.contentList = response.data;
       } catch (error) {
         console.error('Ошибка при получении списка контента:', error);
@@ -1063,72 +1008,11 @@ export default {
       }
     },
     
-    // Инициализация LLM
-    async initializeLLM() {
-      if (!this.initializeForm.confirm) {
-        this.initializeMessage = 'Пожалуйста, подтвердите инициализацию';
-        this.initializeStatus = false;
-        return;
-      }
-      
-      this.isInitializing = true;
-      this.initializeMessage = 'Идет инициализация LLM, это может занять некоторое время...';
-      this.initializeStatus = true;
-      
-      try {
-        // Удаляем лишние пробелы из значений
-        const modelName = this.initializeForm.model_name.trim();
-        const embeddingModelName = this.initializeForm.embedding_model_name.trim();
-        const documentsPath = this.initializeForm.documents_path.trim();
-        const departmentId = this.initializeForm.department_id.trim();
-        
-        // Проверяем, что departmentId не пустой
-        if (!departmentId) {
-          this.initializeMessage = 'ID отдела не может быть пустым';
-          this.initializeStatus = false;
-          this.isInitializing = false;
-          return;
-        }
-        
-        // Отладочная информация: выводим параметры, которые отправляем
-        console.log('Отправляемые параметры:', {
-          model_name: modelName,
-          embedding_model_name: embeddingModelName,
-          documents_path: documentsPath,
-          department_id: departmentId
-        });
-        
-        // Создаем объект данных для отправки в формате JSON
-        const requestData = {
-          model_name: modelName,
-          embedding_model_name: embeddingModelName,
-          documents_path: documentsPath,
-          department_id: departmentId
-        };
-        
-        // Отправляем запрос с JSON данными в теле запроса
-        const response = await axios.post('http://192.168.81.149:8000/llm/initialize', requestData);
-        
-        this.initializeMessage = 'LLM успешно инициализирован!';
-        this.initializeStatus = true;
-        
-        // Сбрасываем подтверждение
-        this.initializeForm.confirm = false;
-      } catch (error) {
-        this.initializeMessage = 'Ошибка инициализации LLM: ' + (error.response?.data?.detail || error.message);
-        this.initializeStatus = false;
-        console.error('Ошибка инициализации LLM:', error);
-      } finally {
-        this.isInitializing = false;
-      }
-    },
-    
     // Загрузка контента для редактирования
     async loadContentForEdit() {
       if (!this.editForm.id) return;
       
       try {
-        // Используем правильный путь к эндпоинту для получения контента
         const response = await axios.get(`http://192.168.81.149:8000/content/content/${this.editForm.id}`);
         const content = response.data;
         
@@ -1150,7 +1034,6 @@ export default {
     // Редактирование контента
     async editContent() {
       try {
-        // Отладка: выводим данные, которые отправляем
         const requestData = {
           title: this.editForm.title,
           description: this.editForm.description,
@@ -1158,14 +1041,8 @@ export default {
           department_id: this.editForm.department_id,
           tag_id: this.editForm.tag_id
         };
-        console.log('Отправляемые данные для редактирования:', requestData);
-        console.log('URL запроса:', `http://192.168.81.149:8000/content/${this.editForm.id}`);
         
-        // Исправляем URL для соответствия эндпоинту в content_routes.py
-        const response = await axios.put(`http://192.168.81.149:8000/content/${this.editForm.id}`, requestData);
-        
-        // Отладка: выводим ответ сервера
-        console.log('Ответ сервера:', response.data);
+        const response = await axios.put(`http://192.168.81.149:8000/content/content/${this.editForm.id}`, requestData);
         
         this.editMessage = 'Контент успешно отредактирован!';
         this.editStatus = true;
@@ -1182,7 +1059,6 @@ export default {
         this.editMessage = error.response?.data?.detail || 'Ошибка при редактировании контента';
         this.editStatus = false;
         console.error('Ошибка редактирования контента:', error);
-        // Отладка: выводим подробную информацию об ошибке
         if (error.response) {
           console.error('Статус ошибки:', error.response.status);
           console.error('Данные ошибки:', error.response.data);
@@ -1194,22 +1070,17 @@ export default {
     // Создание нового теста/анкеты
     async createQuiz() {
       try {
-        // Подготовка данных перед отправкой
         const quizData = JSON.parse(JSON.stringify(this.quizForm));
         
-        // Обработка правильных ответов для разных типов вопросов
         quizData.questions.forEach(question => {
-          // Для одиночного выбора - преобразуем строку в число
           if (question.question_type === 'single_choice' && question.correct_answer) {
             question.correct_answer = parseInt(question.correct_answer);
           }
           
-          // Для множественного выбора - преобразуем массив строк в массив чисел
           if (question.question_type === 'multiple_choice' && Array.isArray(question.correct_answer)) {
             question.correct_answer = question.correct_answer.map(id => parseInt(id));
           }
           
-          // Проверяем, что у вопроса есть options
           if (!question.options) {
             question.options = [];
           }
@@ -1219,7 +1090,6 @@ export default {
         this.quizMessage = 'Тест/анкета успешно создана!';
         this.quizStatus = true;
         
-        // Очистка формы
         this.quizForm = {
           title: '',
           description: '',
@@ -1229,7 +1099,6 @@ export default {
           questions: []
         };
         
-        // Обновляем список тестов/анкет
         await this.fetchQuizzes();
       } catch (error) {
         console.error('Ошибка создания теста/анкеты:', error);
@@ -1245,11 +1114,9 @@ export default {
       this.quizzes = [];
       
       try {
-        // Получаем текущего пользователя
         const currentUser = JSON.parse(localStorage.getItem('user')) || {};
-        const userId = currentUser.id || 1; // Используем ID 1 по умолчанию для администратора
+        const userId = currentUser.id || 1;
         
-        // Формируем параметры запроса
         let params = { user_id: userId };
         if (this.quizFilter.type !== 'all') {
           params.is_test = this.quizFilter.type === 'test';
@@ -1274,13 +1141,11 @@ export default {
       this.selectedQuiz = null;
       
       try {
-        // Получаем текущего пользователя
         const currentUser = JSON.parse(localStorage.getItem('user')) || {};
-        const userId = currentUser.id || 1; // Используем ID 1 по умолчанию для администратора
+        const userId = currentUser.id || 1;
         
         const response = await axios.get(`http://192.168.81.149:8000/quiz/${id}?user_id=${userId}`);
         this.selectedQuiz = response.data;
-        // Открываем модальное окно
         this.quizDetailsModal.show();
       } catch (error) {
         this.quizDetailsError = error.response?.data?.detail || 'Ошибка при получении деталей теста/анкеты';
@@ -1297,7 +1162,6 @@ export default {
           this.quizMessage = 'Тест/анкета успешно удалена!';
           this.quizStatus = true;
           
-          // Обновляем список тестов/анкет
           await this.fetchQuizzes();
         } catch (error) {
           this.quizMessage = error.response?.data?.detail || 'Ошибка при удалении теста/анкеты';
@@ -1318,12 +1182,9 @@ export default {
         const response = await axios.get(`http://192.168.81.149:8000/quiz/stats/${this.resultsQuizId}`);
         this.quizStatistics = response.data;
         
-        // Получаем попытки пользователей
-        // Если выбран конкретный пользователь
         if (this.resultsUserId) {
           await this.fetchUserAttempts();
         } else {
-          // Получаем все попытки для теста
           const userAttemptsResponse = await axios.get(`http://192.168.81.149:8000/quiz/attempts?quiz_id=${this.resultsQuizId}`);
           this.userAttempts = userAttemptsResponse.data;
         }
@@ -1361,13 +1222,11 @@ export default {
       this.selectedAttempt = null;
       
       try {
-        // Получаем текущего пользователя
         const currentUser = JSON.parse(localStorage.getItem('user')) || {};
-        const userId = currentUser.id || 1; // Используем ID 1 по умолчанию для администратора
+        const userId = currentUser.id || 1;
         
         const response = await axios.get(`http://192.168.81.149:8000/quiz/attempt/${id}?user_id=${userId}`);
         this.selectedAttempt = response.data;
-        // Открываем модальное окно
         this.attemptDetailsModal.show();
       } catch (error) {
         this.attemptDetailsError = error.response?.data?.detail || 'Ошибка при получении деталей попытки';
@@ -1378,7 +1237,7 @@ export default {
     
     // Методы для работы с вопросами и вариантами ответов
     addQuestion() {
-      const newQuestionId = Date.now(); // Уникальный ID для нового вопроса в рамках текущей сессии
+      const newQuestionId = Date.now();
       this.quizForm.questions.push({
         text: '',
         question_type: 'single_choice',
@@ -1386,7 +1245,7 @@ export default {
           { id: newQuestionId + 1, text: '' },
           { id: newQuestionId + 2, text: '' }
         ],
-        correct_answer: '',  // Для single_choice используем строку
+        correct_answer: '',
         order: this.quizForm.questions.length + 1
       });
     },
@@ -1396,7 +1255,6 @@ export default {
     },
     
     addOption(question) {
-      // Генерируем уникальный ID для нового варианта
       const newId = question.options.length > 0 
         ? Math.max(...question.options.map(o => o.id)) + 1 
         : Date.now();
@@ -1406,14 +1264,12 @@ export default {
         text: ''
       });
       
-      // Инициализируем correct_answer как массив для multiple_choice
       if (question.question_type === 'multiple_choice' && !Array.isArray(question.correct_answer)) {
         question.correct_answer = [];
       }
     },
     
     removeOption(question, index) {
-      // Если удаляемый вариант был выбран как правильный, сбрасываем правильный ответ
       const optionId = question.options[index].id;
       
       if (question.question_type === 'single_choice' && question.correct_answer === optionId) {
@@ -1425,9 +1281,7 @@ export default {
       question.options.splice(index, 1);
     },
     
-    // Обработка изменения типа вопроса
     handleQuestionTypeChange(question) {
-      // Сбрасываем правильный ответ при изменении типа вопроса
       if (question.question_type === 'single_choice') {
         question.correct_answer = question.options && question.options.length > 0 ? 
           String(question.options[0].id) : '';
@@ -1437,7 +1291,6 @@ export default {
         question.correct_answer = '';
       }
       
-      // Если тип вопроса не предполагает варианты, но они есть, сохраняем их на всякий случай
       if (question.options === undefined || question.options === null) {
         const newOptionId = Date.now();
         question.options = [
@@ -1447,7 +1300,6 @@ export default {
       }
     },
     
-    // Вспомогательные методы для отображения данных
     getDepartmentName(id) {
       if (!id) return null;
       const department = this.departments.find(d => d.id === id);
@@ -1469,12 +1321,10 @@ export default {
       if (!question.correct_answer) return false;
       
       if (question.question_type === 'single_choice') {
-        // Обрабатываем как число или строку
         const correctAnswer = typeof question.correct_answer === 'number' ? 
           question.correct_answer : parseInt(question.correct_answer);
         return correctAnswer === optionId;
       } else if (question.question_type === 'multiple_choice' && Array.isArray(question.correct_answer)) {
-        // Проверяем наличие ID в массиве правильных ответов
         return question.correct_answer.some(id => {
           const correctId = typeof id === 'string' ? parseInt(id) : id;
           return correctId === optionId;
@@ -1503,7 +1353,6 @@ export default {
         const option = (question.options || []).find(o => o.id === correctId);
         return option ? option.text : '';
       } else if (question.question_type === 'multiple_choice' && Array.isArray(question.correct_answer)) {
-        // Преобразуем IDs в числа для корректного сравнения
         const correctIds = question.correct_answer.map(id => 
           typeof id === 'string' ? parseInt(id) : id);
         const selectedOptions = (question.options || []).filter(o => 
