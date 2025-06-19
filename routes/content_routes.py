@@ -28,12 +28,13 @@ async def upload_content(
     description: str,
     access_id: int,
     department_id: int,
-    tag_id: int = None,  # Новый параметр для указания тега
+    directory_path: str,
     file: UploadFile = File(...),
+    tag_id: int = None,
     db: Session = Depends(get_db)
 ):
-    # Сохранение файла на сервере
-    file_location = f"content_files/{file.filename}"
+    # Сохранение файла на сервере в указанной директории
+    file_location = f"{directory_path}/{file.filename}"  # Используем указанный путь
     with open(file_location, "wb") as f:
         f.write(await file.read())
 

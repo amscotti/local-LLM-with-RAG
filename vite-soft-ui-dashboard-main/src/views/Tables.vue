@@ -127,6 +127,12 @@
                       </select>
                     </div>
                     <div class="col-md-6 mb-3">
+                      <label for="directory_path" class="form-label">Директория</label>
+                      <input type="text" class="form-control" id="directory_path" v-model="contentForm.directory_path" placeholder="Укажите директорию">
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col-md-6 mb-3">
                       <label for="file" class="form-label">Файл</label>
                       <input type="file" class="form-control" id="file" @change="handleFileUpload" required>
                     </div>
@@ -729,7 +735,8 @@ export default {
         department_id: null,
         access_level: null,
         tag_id: null,
-        file: null
+        file: null,
+        directory_path: ''
       },
       uploadMessage: '',
       uploadStatus: false,
@@ -954,29 +961,29 @@ export default {
     async uploadContent() {
       try {
         if (!this.contentForm.title || !this.contentForm.description || !this.contentForm.department_id || 
-            !this.contentForm.access_level || !this.contentForm.file) {
+            !this.contentForm.access_level || !this.contentForm.file || !this.contentForm.directory_path) {
           this.uploadMessage = 'Все поля должны быть заполнены';
           this.uploadStatus = false;
           return;
         }
 
-        // Создаем объект FormData для отправки файла
         const formData = new FormData();
         formData.append('file', this.contentForm.file);
         
         // Отправляем запрос с параметрами в URL-строке
         const response = await axios.post(
-          `http://192.168.81.149:8000/content/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
-          `&description=${encodeURIComponent(this.contentForm.description)}` +
-          `&access_id=${this.contentForm.access_level}` +
-          `&department_id=${this.contentForm.department_id}` +
-          `&tag_id=${this.contentForm.tag_id || ''}`,
-          formData,
-          {
-            headers: {
-              'Content-Type': 'multipart/form-data'
+            `http://192.168.81.149:8000/content/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
+            `&description=${encodeURIComponent(this.contentForm.description)}` +
+            `&access_id=${this.contentForm.access_level}` +
+            `&department_id=${this.contentForm.department_id}` +
+            `&tag_id=${this.contentForm.tag_id || ''}` +
+            `&directory_path=${encodeURIComponent(this.contentForm.directory_path)}`,
+            formData,
+            {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
             }
-          }
         );
         
         this.uploadMessage = 'Контент успешно загружен!';
@@ -989,7 +996,8 @@ export default {
           department_id: null,
           access_level: null,
           tag_id: null,
-          file: null
+          file: null,
+          directory_path: ''
         };
         
         // Сбрасываем поле загрузки файла
