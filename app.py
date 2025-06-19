@@ -21,9 +21,48 @@ from llm import getChatChain
 from quiz import router as quiz_router
 from directory_routes import router as directory_router  # Импортируйте ваш маршрутизатор
 from llm_routes import router as llm_router  # Импортируйте ваш маршрутизатор
+from content_routes import router as content_router
+from user_routes import router as user_router
 
+# Инициализация глобальных переменных
+app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Или укажите конкретные домены
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешить все методы
+    allow_headers=["*"],  # Разрешить все заголовки
+)
 
+# Добавляем маршрутизатор для тестов и анкет
+app.include_router(quiz_router)
+app.include_router(directory_router)
+app.include_router(llm_router)  # Добавьте маршрутизатор для LL
+app.include_router(content_router)
+app.include_router(user_router)
+
+# Словари для хранения экземпляров чатов и баз данных для каждого отдела
+department_chats = {}  # {department_id: chat_instance}
+department_dbs = {}    # {department_id: db_instance}
+department_embedding_models = {}  # {department_id: embedding_model_instance}
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Настройки подключения к базе данных
+DATABASE_URL = "mysql+mysqlconnector://root:123123@localhost:3306/db"
+
+# Создание движка и сессии
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Добавляем новый класс для запросов на генерацию без RAG
+class GenerateRequest(BaseModel):
+    messages: str
+    model: str = "ilyagusev/saiga_llama3:latest"
+
+class GenerateResponse(BaseModel):
+    text: str
+    model: str = "ilyagusev/saiga_llama3:latest"
 
 # Функция для проверки доступности модели
 def check_if_model_is_available(model_name: str):
@@ -58,135 +97,6 @@ def get_available_models():
         "embedding_models": embedding_models
     }
 
-# Инициализация глобальных переменных
-app = FastAPI()
-# Добавляем маршрутизатор для тестов и анкет
-app.include_router(quiz_router)
-app.include_router(directory_router)
-app.include_router(llm_router)  # Добавьте маршрутизатор для LLM
-
-# Словари для хранения экземпляров чатов и баз данных для каждого отдела
-department_chats = {}  # {department_id: chat_instance}
-department_dbs = {}    # {department_id: db_instance}
-department_embedding_models = {}  # {department_id: embedding_model_instance}
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-# Настройки подключения к базе данных
-DATABASE_URL = "mysql+mysqlconnector://root:123123@localhost:3306/db"
-
-# Создание движка и сессии
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Добавляем новый класс для запросов на генерацию без RAG
-class GenerateRequest(BaseModel):
-    messages: str
-    model: str = "ilyagusev/saiga_llama3:latest"
-
-class GenerateResponse(BaseModel):
-    text: str
-    model: str = "ilyagusev/saiga_llama3:latest"
-
-# Добавляем новый эндпоинт для генерации без использования RAG
-@app.post("/generate")
-async def generate(request: GenerateRequest):
-    try:
-        # Проверяем, доступна ли модель
-        check_if_model_is_available(request.model)
-        
-        # Создаем экземпляр модели
-        llm = ChatOllama(model=request.model)
-        
-        # Отправляем запрос напрямую к модели без использования RAG
-        response = llm.invoke(request.messages)
-        
-        # Извлекаем ответ из объекта response
-        if hasattr(response, "content"):
-            response_text = response.content
-        else:
-            response_text = str(response)
-            
-        return GenerateResponse(text=response_text, model=request.model)
-    except Exception as e:
-        error_message = f"Ошибка при обработке запроса на генерацию: {str(e)}"
-        print(error_message)
-        import traceback
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=error_message)
-    
-
-
-
-# Эндпоинт для векторного поиска
-class QueryRequest(BaseModel):
-    question: str
-    department_id: str = "default"
-
-class InitRequest(BaseModel):
-    model_name: str
-    embedding_model_name: str
-    documents_path: str
-    department_id: str = "default"
-
-@app.post("/query")
-async def query(request: QueryRequest):
-    department_id = request.department_id
-    
-    if department_id not in department_chats:
-        raise HTTPException(status_code=500, detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /initialize.")
-    
-    print(f"Получен запрос для отдела {department_id}: {request}")  # Отладочное сообщение
-    user_question = request.question
-    
-    # Выполняем векторный поиск фрагментов
-    top_chunks, top_files = vec_search(department_embedding_models[department_id], user_question, department_dbs[department_id], n_top_cos=5)
-    
-    try:
-        response = department_chats[department_id](user_question)
-        print(f"Ответ от LLM для отдела {department_id}: {response}")  # Отладочное сообщение
-        
-        if response is None:
-            print("Получен пустой ответ от LLM")
-            raise HTTPException(status_code=500, detail="Получен пустой ответ от LLM.")
-        
-        # Проверяем, начинается ли ответ с "Произошла ошибка"
-        if isinstance(response, str) and response.startswith("Произошла ошибка"):
-            print(f"LLM вернул сообщение об ошибке: {response}")
-            raise HTTPException(status_code=500, detail=response)
-        
-        return {"answer": response, "chunks": top_chunks, "files": top_files}
-    except Exception as e:
-        error_message = f"Ошибка при обработке запроса: {str(e)}"
-        print(error_message)
-        import traceback
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=error_message)
-
-
-# Эндпоинт для инициализации LLM
-@app.post("/initialize")
-async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
-    try:
-        # Проверяем существование отдела в базе данных
-        department = db.query(Department).filter(Department.id == int(request.department_id)).first()
-        if not department and request.department_id != "default":
-            raise HTTPException(status_code=404, detail=f"Отдел с ID {request.department_id} не найден")
-        
-        # Вызов функции инициализации с учетом отдела
-        success = initialize_llm(
-            request.model_name, 
-            request.embedding_model_name, 
-            request.documents_path, 
-            request.department_id
-        )
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="Не удалось инициализировать модель")
-            
-        return {"message": f"Модель для отдела {request.department_id} успешно инициализирована"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 # Эндпоинт для парсинга аргументов
 @app.get("/parse-args")
 async def parse_args():
@@ -198,38 +108,6 @@ async def parse_args():
         "web": args.web,
         "port": args.port
     }
-
-# Эндпоинт для получения всех доступных моделей
-@app.get("/models")
-async def get_models():
-    models = get_available_models()
-    return models
-
-# Эндпоинт для получения доступных моделей LLM
-@app.get("/models/llm")
-async def get_llm_models():
-    models = get_available_models()
-    return {"models": models["llm_models"]}
-
-# Эндпоинт для получения доступных моделей эмбеддингов
-@app.get("/models/embedding")
-async def get_embedding_models():
-    models = get_available_models()
-    return {"models": models["embedding_models"]}
-
-# Эндпоинт для загрузки файлов
-@app.post("/upload-file")
-async def upload_file(file: UploadFile = File(...)):
-    # Проверка на уникальность имени файла
-    if file.filename in os.listdir("Research"):  # Предполагается, что "Research" - это папка для хранения файлов
-        return {"message": "Файл с таким именем уже существует."}
-
-    # Сохранение файла
-    file_location = f"Research/{file.filename}"
-    with open(file_location, "wb") as f:
-        f.write(await file.read())
-
-    return {"message": f"Файл '{file.filename}' успешно загружен."}
 
 @app.get("/check_db_connection")
 async def check_db_connection():
@@ -357,328 +235,7 @@ def parse_arguments() -> argparse.Namespace:
     )
     return parser.parse_args()
 
-class UserCreate(BaseModel):
-    login: str
-    password: str
-    role_id: int
-    department_id: int
-    access_id: int
-# role_id - 1
-# department_id - 5
-# access_id - 3
 
-@app.post("/register")
-async def register(user: UserCreate, db: Session = Depends(get_db)):
-    # Проверка существования пользователя
-    existing_user = db.query(User).filter(User.login == user.login).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Пользователь уже существует")
-
-    # Хеширование пароля
-    hashed_password = pwd_context.hash(user.password)
-    new_user = User(
-        login=user.login,
-        password=hashed_password,
-        role_id=user.role_id,
-        department_id=user.department_id,
-        access_id=user.access_id
-    )
-
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return {"message": "Пользователь успешно зарегистрирован"}
-
-class UserLogin(BaseModel):
-    login: str
-    password: str
-
-def generate_auth_key() -> str:
-    """Генерация случайного ключа аутентификации."""
-    return secrets.token_hex(16)
-
-@app.post("/login")
-async def login(user_data: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.login == user_data.login).first()
-    if not user or not user.check_password(user_data.password):
-        raise HTTPException(status_code=401, detail="Неверный логин или пароль")
-    
-    auth_key = generate_auth_key()
-    user.auth_key = auth_key
-    db.commit()
-    
-    return {
-        "id": user.id,
-        "login": user.login,
-        "auth_key": auth_key,
-        "role_id": user.role_id,
-        "department_id": user.department_id,
-        "access_id": user.access_id
-    }
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Или укажите конкретные домены
-    allow_credentials=True,
-    allow_methods=["*"],  # Разрешить все методы
-    allow_headers=["*"],  # Разрешить все заголовки
-)
-
-@app.post("/upload-content")
-async def upload_content(
-    title: str,
-    description: str,
-    access_id: int,
-    department_id: int,
-    tag_id: int = None,  # Новый параметр для указания тега
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    # Сохранение файла на сервере
-    file_location = f"content_files/{file.filename}"
-    with open(file_location, "wb") as f:
-        f.write(await file.read())
-
-    # Проверка существования уровня доступа
-    access = db.query(Access).filter(Access.id == access_id).first()
-    if access is None:
-        raise HTTPException(status_code=400, detail="Уровень доступа не найден")
-
-    # Создание записи в базе данных
-    new_content = Content(
-        title=title,
-        description=description,
-        file_path=file_location,
-        access_level=access_id,
-        department_id=department_id,
-        tag_id=tag_id  # Указываем тег, если он есть
-    )
-    db.add(new_content)
-    db.commit()
-    db.refresh(new_content)
-
-    return {"message": "Контент успешно загружен"}
-
-@app.put("/content/{content_id}")
-async def update_content(
-    content_id: int,
-    title: str = None,
-    description: str = None,
-    access_id: int = None,
-    department_id: int = None,
-    tag_id: int = None,
-    db: Session = Depends(get_db)
-):
-    # Получаем контент из базы данных по ID
-    content = db.query(Content).filter(Content.id == content_id).first()
-    if content is None:
-        raise HTTPException(status_code=404, detail="Контент не найден")
-
-    # Обновляем поля, если они были переданы
-    if title is not None:
-        content.title = title
-    if description is not None:
-        content.description = description
-    if access_id is not None:
-        # Проверка существования уровня доступа
-        access = db.query(Access).filter(Access.id == access_id).first()
-        if access is None:
-            raise HTTPException(status_code=400, detail="Уровень доступа не найден")
-        content.access_level = access_id
-    if department_id is not None:
-        content.department_id = department_id
-    if tag_id is not None:
-        content.tag_id = tag_id
-
-    db.commit()
-    db.refresh(content)
-
-    return {"message": "Контент успешно обновлен", "content": content}
-
-class ContentBase(BaseModel):
-    id: int
-    title: str
-    description: str
-    file_path: str
-
-    class Config:
-        orm_mode = True
-
-@app.get("/content/filter")
-async def get_content_by_access_and_department(
-    access_level: int,
-    department_id: int,
-    tag_id: int = None,  # Новый параметр для фильтрации по тегу
-    db: Session = Depends(get_db)
-):
-    try:
-        query = db.query(Content).filter(
-            Content.access_level == access_level,
-            Content.department_id == department_id
-        )
-        
-        if tag_id is not None:
-            query = query.filter(Content.tag_id == tag_id)  # Фильтрация по тегу
-
-        contents = query.all()
-
-        if not contents:
-            raise HTTPException(status_code=404, detail="Контент не найден")
-
-        return [
-            {
-                "id": content.id,
-                "title": content.title,
-                "description": content.description,
-                "file_path": content.file_path,
-                "access_level": content.access_level,
-                "department_id": content.department_id,
-                "tag_id": content.tag_id  # Возвращаем ID тега
-            } for content in contents
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
-    
-@app.get("/user/{id}")
-async def get_user(id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == id).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail="Пользователь не найден")
-    
-    # Получаем название отдела
-    department = db.query(Department).filter(Department.id == user.department_id).first()
-    department_name = department.department_name if department else "Неизвестный отдел"
-
-    # Получаем название доступа
-    access = db.query(Access).filter(Access.id == user.access_id).first()
-    access_name = access.access_name if access else "Неизвестный доступ"
-
-    return {
-        "login": user.login,
-        "role_id": user.role_id,
-        "department_name": department_name,
-        "access_name": access_name,
-    }
-
-@app.get("/user/{user_id}/content")
-async def get_user_content(user_id: int, db: Session = Depends(get_db)):
-    try:
-        # Получаем пользователя по user_id
-        user = db.query(User).filter(User.id == user_id).first()
-        if user is None:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-        # Получаем контент из базы данных по access_level и department_id пользователя
-        contents = db.query(Content).filter(
-            Content.access_level == user.access_id,
-            Content.department_id == user.department_id
-        ).all()
-
-        print(f"Access Level: {user.access_id}, Department ID: {user.department_id}")  # Отладочное сообщение
-        print(f"Found contents: {len(contents)}")  # Количество найденного контента
-
-        if not contents:
-            raise HTTPException(status_code=404, detail="Контент не найден")
-
-        result = []
-        for content in contents:
-            # Получаем название отдела
-            department = db.query(Department).filter(Department.id == content.department_id).first()
-            department_name = department.department_name if department else "Неизвестный отдел"
-            
-            # Получаем название уровня доступа
-            access = db.query(Access).filter(Access.id == content.access_level).first()
-            access_name = access.access_name if access else "Неизвестный уровень"
-            
-            result.append({
-                "id": content.id,
-                "title": content.title,
-                "description": content.description,
-                "file_path": content.file_path,
-                "department_id": content.department_id,
-                "department_name": department_name,
-                "access_level": content.access_level,
-                "access_name": access_name
-            })
-        
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
-
-@app.get("/download-file/{content_id}")
-async def download_file(content_id: int, db: Session = Depends(get_db)):
-    # Получаем контент из базы данных по ID
-    content = db.query(Content).filter(Content.id == content_id).first()
-    if content is None:
-        raise HTTPException(status_code=404, detail="Контент не найден")
-
-    # Проверяем, существует ли файл
-    file_path = content.file_path
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Файл не найден")
-
-    # Возвращаем файл как ответ
-    return FileResponse(file_path, media_type='application/octet-stream', filename=os.path.basename(file_path))
-
-@app.get("/view-file/{content_id}")
-async def view_file(content_id: int, db: Session = Depends(get_db)):
-    # Получаем контент из базы данных по ID
-    content = db.query(Content).filter(Content.id == content_id).first()
-    if content is None:
-        raise HTTPException(status_code=404, detail="Контент не найден")
-
-    # Проверяем, существует ли файл
-    file_path = content.file_path
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Файл не найден")
-
-    # Определяем тип файла на основе расширения
-    file_extension = os.path.splitext(file_path)[1].lower()
-    
-    # Устанавливаем соответствующий media_type в зависимости от расширения файла
-    if file_extension in ['.pdf']:
-        media_type = 'application/pdf'
-    elif file_extension in ['.mp3', '.wav', '.ogg']:
-        media_type = f'audio/{file_extension[1:]}'
-    elif file_extension in ['.mp4', '.webm', '.avi', '.mov']:
-        media_type = f'video/{file_extension[1:]}'
-    elif file_extension in ['.jpg', '.jpeg', '.png', '.gif']:
-        media_type = f'image/{file_extension[1:]}'
-    else:
-        # Для других типов файлов используем общий тип
-        media_type = 'application/octet-stream'
-
-    # Возвращаем файл как ответ с заголовком для открытия в браузере
-    return FileResponse(file_path, media_type=media_type, filename=os.path.basename(file_path), headers={"Content-Disposition": "inline"})
-
-
-@app.get("/users")
-async def get_users(db: Session = Depends(get_db)):
-    try:
-        users = db.query(User).all()  # Получаем всех пользователей из базы данных
-        user_list = []
-        
-        for user in users:
-            # Получаем название отдела
-            department = db.query(Department).filter(Department.id == user.department_id).first()
-            department_name = department.department_name if department else "Неизвестный отдел"
-
-            # Получаем название доступа
-            access = db.query(Access).filter(Access.id == user.access_id).first()
-            access_name = access.access_name if access else "Неизвестный доступ"
-
-            user_list.append({
-                "id": user.id,
-                "login": user.login,
-                "role_id": user.role_id,
-                "department_name": department_name,
-                "access_name": access_name,
-            })
-
-        return user_list
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при получении пользователей: {str(e)}")
 
 @app.get("/api/departments")
 async def get_departments(db: Session = Depends(get_db)):
@@ -689,69 +246,6 @@ async def get_departments(db: Session = Depends(get_db)):
 async def get_access_levels(db: Session = Depends(get_db)):
     access_levels = db.query(Access).all()
     return [{"id": access_level.id, "access_name": access_level.access_name} for access_level in access_levels]
-
-@app.put("/user/{user_id}")
-async def update_user(user_id: int, user_data: dict, db: Session = Depends(get_db)):
-    try:
-        # Получаем пользователя по ID
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-        
-        # Обновляем данные пользователя
-        if "department_id" in user_data:
-            user.department_id = user_data["department_id"]
-        
-        if "access_id" in user_data:
-            user.access_id = user_data["access_id"]
-            
-        # Сохраняем изменения
-        db.commit()
-        db.refresh(user)
-        
-        return {"message": "Данные пользователя успешно обновлены"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка при обновлении пользователя: {str(e)}")
-
-@app.delete("/user/{user_id}")
-async def delete_user(user_id: int, db: Session = Depends(get_db)):
-    try:
-        # Получаем пользователя по ID
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-        
-        # Удаляем пользователя
-        db.delete(user)
-        db.commit()
-        
-        return {"message": "Пользователь успешно удален"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка при удалении пользователя: {str(e)}")
-
-@app.put("/user/{user_id}/password")
-async def update_password(user_id: int, password_data: dict, db: Session = Depends(get_db)):
-    try:
-        # Получаем пользователя по ID
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="Пользователь не найден")
-        
-        # Хешируем новый пароль
-        hashed_password = pwd_context.hash(password_data["password"])
-        
-        # Обновляем пароль пользователя
-        user.password = hashed_password
-        
-        # Сохраняем изменения
-        db.commit()
-        
-        return {"message": "Пароль пользователя успешно обновлен"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка при обновлении пароля: {str(e)}")
 
 @app.get("/departments")
 async def get_departments(db: Session = Depends(get_db)):
@@ -867,69 +361,6 @@ async def get_user_content_by_tags(user_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
-@app.get("/content/all")
-async def get_all_content(db: Session = Depends(get_db)):
-    try:
-        contents = db.query(Content).all()
-        return [
-            {
-                "id": content.id,
-                "title": content.title,
-                "description": content.description,
-                "file_path": content.file_path,
-                "access_level": content.access_level,
-                "department_id": content.department_id,
-                "tag_id": content.tag_id
-            } for content in contents
-        ]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
-
-@app.get("/content/{content_id}")
-async def get_content_by_id(content_id: int, db: Session = Depends(get_db)):
-    try:
-        content = db.query(Content).filter(Content.id == content_id).first()
-        if content is None:
-            raise HTTPException(status_code=404, detail="Контент не найден")
-        
-        return {
-            "id": content.id,
-            "title": content.title,
-            "description": content.description,
-            "file_path": content.file_path,
-            "access_level": content.access_level,
-            "department_id": content.department_id,
-            "tag_id": content.tag_id
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
-
-@app.delete("/content/{content_id}")
-async def delete_content(content_id: int, db: Session = Depends(get_db)):
-    try:
-        # Получаем контент по ID
-        content = db.query(Content).filter(Content.id == content_id).first()
-        if not content:
-            raise HTTPException(status_code=404, detail="Контент не найден")
-        
-        # Сохраняем путь к файлу
-        file_path = content.file_path
-        
-        # Удаляем контент из базы данных
-        db.delete(content)
-        db.commit()
-        
-        # Удаляем файл с сервера, если он существует
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception as e:
-                print(f"Ошибка при удалении файла {file_path}: {e}")
-        
-        return {"message": "Контент успешно удален"}
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Ошибка при удалении контента: {str(e)}")
 
 @app.get("/initialized-departments")
 async def get_initialized_departments():
