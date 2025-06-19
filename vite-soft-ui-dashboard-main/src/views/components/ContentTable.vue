@@ -86,11 +86,11 @@ export default {
         }
         
         // Получаем данные о пользователе
-        const userResponse = await axios.get(`http://192.168.81.149:8000/user/${userId}`);
+        const userResponse = await axios.get(`http://192.168.81.149:8000/user/user/${userId}`);
         const user = userResponse.data;
         
         // Получаем контент для пользователя
-        const response = await axios.get(`http://192.168.81.149:8000/user/${userId}/content`);
+        const response = await axios.get(`http://192.168.81.149:8000/user/user/${userId}/content`);
         this.contents = response.data;
       } catch (error) {
         this.contents = [];
@@ -99,14 +99,14 @@ export default {
     
     // Получение ссылки для скачивания файла
     getDownloadLink(contentId) {
-      return `http://192.168.81.149:8000/download-file/${contentId}`;
+      return `http://192.168.81.149:8000/content/download-file/${contentId}`;
     },
     
     // Удаление контента
     async deleteContent(contentId) {
       if (confirm('Вы уверены, что хотите удалить этот контент?')) {
         try {
-          await axios.delete(`http://192.168.81.149:8000/content/${contentId}`);
+          await axios.delete(`http://192.168.81.149:8000/content/content/${contentId}`);
           this.fetchAllContent(); // Обновляем список контента
         } catch (error) {
           console.error('Ошибка при удалении контента:', error);
