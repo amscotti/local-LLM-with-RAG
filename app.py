@@ -19,10 +19,10 @@ from database import get_db
 
 from llm import getChatChain
 from quiz import router as quiz_router
-from directory_routes import router as directory_router  # Импортируйте ваш маршрутизатор
-from llm_routes import router as llm_router  # Импортируйте ваш маршрутизатор
-from content_routes import router as content_router
-from user_routes import router as user_router
+from routes.directory_routes import router as directory_router  # Импортируйте ваш маршрутизатор
+from routes.llm_routes import router as llm_router  # Импортируйте ваш маршрутизатор
+from routes.content_routes import router as content_router
+from routes.user_routes import router as user_router
 
 # Инициализация глобальных переменных
 app = FastAPI()
