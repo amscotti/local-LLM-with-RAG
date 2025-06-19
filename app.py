@@ -1,5 +1,5 @@
 from langchain_ollama import ChatOllama, OllamaEmbeddings
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query, APIRouter
 from pydantic import BaseModel
 import uvicorn
 import os
@@ -19,6 +19,9 @@ from database import get_db
 
 from llm import getChatChain
 from quiz import router as quiz_router
+from directory_routes import router as directory_router  # Импортируйте ваш маршрутизатор
+from llm_routes import router as llm_router  # Импортируйте ваш маршрутизатор
+
 
 
 
@@ -59,6 +62,8 @@ def get_available_models():
 app = FastAPI()
 # Добавляем маршрутизатор для тестов и анкет
 app.include_router(quiz_router)
+app.include_router(directory_router)
+app.include_router(llm_router)  # Добавьте маршрутизатор для LLM
 
 # Словари для хранения экземпляров чатов и баз данных для каждого отдела
 department_chats = {}  # {department_id: chat_instance}
