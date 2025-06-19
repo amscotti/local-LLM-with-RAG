@@ -134,7 +134,7 @@ export default {
         
         if (this.chatMode === "rag") {
           // Используем эндпоинт /query для режима с RAG
-          response = await axios.post("http://192.168.81.149:8000/query", {
+          response = await axios.post("http://192.168.81.149:8000/llm/query", {
             question: message,
             department_id: departmentId // Добавляем department_id в запрос
           });
@@ -146,7 +146,7 @@ export default {
           });
         } else {
           // Используем эндпоинт /generate для простого чата
-          response = await axios.post("http://192.168.81.149:8000/generate", {
+          response = await axios.post("http://192.168.81.149:8000/llm/generate", {
             messages: message,
             department_id: departmentId // Добавляем department_id в запрос
           });

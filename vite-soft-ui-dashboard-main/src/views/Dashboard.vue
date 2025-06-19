@@ -226,7 +226,7 @@ export default {
     async searchDocuments() {
       if (this.searchQuery.length > 0) {
         try {
-          const response = await axios.get(`http://192.168.81.149:8000/search-documents?user_id=${this.userId}&search_query=${this.searchQuery}`);
+          const response = await axios.get(`http://192.168.81.149:8000/content/search-documents?user_id=${this.userId}&search_query=${this.searchQuery}`);
           this.documents = response.data.documents; // Обновляем список документов
         } catch (error) {
           console.error("Ошибка при поиске документов:", error);
@@ -257,7 +257,7 @@ export default {
       // Проверяем, является ли файл аудио или видео
       if (this.isAudio(fileExtension) || this.isVideo(fileExtension)) {
         // Настраиваем модальное окно для медиа файла
-        this.currentMediaUrl = `http://192.168.81.149:8000/view-file/${doc.id}`;
+        this.currentMediaUrl = `http://192.168.81.149:8000/content/view-file/${doc.id}`;
         this.currentMediaTitle = doc.title || this.getFileName(doc.file_path);
         
         // Устанавливаем тип медиа
@@ -275,21 +275,21 @@ export default {
         this.mediaPlayerModal.show();
       } else {
         // Для других типов файлов открываем в новой вкладке
-        window.open(`http://192.168.81.149:8000/view-file/${doc.id}`, '_blank');
+        window.open(`http://192.168.81.149:8000/content/view-file/${doc.id}`, '_blank');
       }
     },
     async downloadDocument(doc) {
       try {
         // Скачивание документа
-        window.location.href = `http://192.168.81.149:8000/download-file/${doc.id}`;
+        window.location.href = `http://192.168.81.149:8000/content/download-file/${doc.id}`;
       } catch (error) {
         console.error("Ошибка при скачивании документа:", error);
       }
     },
     copyLink(docId, action) {
       const url = action === 'view' 
-        ? `http://192.168.81.149:8000/view-file/${docId}` 
-        : `http://192.168.81.149:8000/download-file/${docId}`;
+        ? `http://192.168.81.149:8000/content/view-file/${docId}` 
+        : `http://192.168.81.149:8000/content/download-file/${docId}`;
       
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(() => {
