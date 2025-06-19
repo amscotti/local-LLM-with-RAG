@@ -185,7 +185,7 @@ async def delete_content(content_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Ошибка при удалении контента: {str(e)}")
 
 
-@router.get("/content/all")
+@router.get("/all")
 async def get_all_content(db: Session = Depends(get_db)):
     try:
         contents = db.query(Content).all()
