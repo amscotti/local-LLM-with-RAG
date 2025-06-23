@@ -92,7 +92,7 @@
             <label for="accessLevelSelect">Уровень доступа</label>
             <select class="form-control" id="accessLevelSelect" v-model="editingUser.access_id">
               <option v-for="access in accessLevels" :key="access.id" :value="access.id">
-                {{ access.name }}
+                {{ access.access_name }}
               </option>
             </select>
           </div>
