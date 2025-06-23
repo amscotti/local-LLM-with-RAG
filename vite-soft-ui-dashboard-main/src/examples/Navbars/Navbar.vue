@@ -16,7 +16,7 @@
           class="pe-md-3 d-flex align-items-center"
           :class="$store.state.isRTL ? 'me-md-auto' : 'ms-md-auto'"
         >
-          <div class="input-group">
+          <!-- <div class="input-group">
             <span class="input-group-text text-body">
               <i class="fas fa-search" aria-hidden="true"></i>
             </span>
@@ -27,11 +27,11 @@
                 $store.state.isRTL ? 'أكتب هنا...' : 'Type here...'
               "
             />
-          </div>
+          </div> -->
         </div>
         <ul class="navbar-nav justify-content-end">
           <li class="nav-item d-flex align-items-center">
-            <router-link
+            <!-- <router-link
               :to="{ name: 'Sign In' }"
               class="px-0 nav-link font-weight-bold"
               :class="textWhite ? textWhite : 'text-body'"
@@ -39,7 +39,7 @@
               <i class="fa fa-user" :class="$store.state.isRTL ? 'ms-sm-2' : 'me-sm-1'"></i>
               <span v-if="$store.state.isRTL" class="d-sm-inline d-none">يسجل دخول</span>
               <span v-else class="d-sm-inline d-none">Sign In</span>
-            </router-link>
+            </router-link> -->
           </li>
           <li class="nav-item d-xl-none ps-3 d-flex align-items-center">
             <a
@@ -56,19 +56,19 @@
             </a>
           </li>
           <li class="px-3 nav-item d-flex align-items-center">
-            <a
+            <!-- <a
               class="p-0 nav-link"
               :class="textWhite ? textWhite : 'text-body'"
               @click="toggleConfigurator"
             >
               <i class="cursor-pointer fa fa-cog fixed-plugin-button-nav"></i>
-            </a>
+            </a> -->
           </li>
           <li
             class="nav-item dropdown d-flex align-items-center"
             :class="$store.state.isRTL ? 'ps-2' : 'pe-2'"
           >
-            <a
+            <!-- <a
               id="dropdownMenuButton"
               href="#"
               class="p-0 nav-link"
@@ -81,7 +81,7 @@
               @click="showMenu = !showMenu"
             >
               <i class="cursor-pointer fa fa-bell"></i>
-            </a>
+            </a> -->
             <ul
               class="px-2 py-3 dropdown-menu dropdown-menu-end me-sm-n4"
               :class="showMenu ? 'show' : ''"

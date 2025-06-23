@@ -20,13 +20,13 @@
     />
     <router-view />
     <app-footer v-show="$store.state.showFooter" />
-    <configurator
+    <!-- <configurator
       :toggle="toggleConfigurator"
       :class="[
         $store.state.showConfig ? 'show' : '',
         $store.state.hideConfigButton ? 'd-none' : '',
       ]"
-    />
+    /> -->
   </main>
 </template>
 <script>

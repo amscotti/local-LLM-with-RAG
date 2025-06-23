@@ -23,7 +23,7 @@
           <ul
             class="nav nav-footer justify-content-center justify-content-lg-end"
           >
-            <li class="nav-item">
+            <!-- <li class="nav-item">
               <a
                 href="https://www.creative-tim.com"
                 class="nav-link text-muted"
@@ -54,7 +54,7 @@
                 target="_blank"
                 >License</a
               >
-            </li>
+            </li> -->
           </ul>
         </div>
       </div>
