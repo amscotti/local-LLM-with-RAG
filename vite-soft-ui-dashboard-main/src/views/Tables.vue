@@ -1411,7 +1411,7 @@ export default {
     // Получение списка пользователей
     async fetchUsers() {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/users`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/user/users`);
         this.users = response.data;
       } catch (error) {
         console.error('Ошибка при получении списка пользователей:', error);
