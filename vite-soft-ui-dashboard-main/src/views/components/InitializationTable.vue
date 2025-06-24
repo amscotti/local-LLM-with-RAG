@@ -143,7 +143,7 @@ export default {
           department_id: departmentId
         };
         
-        const response = await axios.post('http://192.168.81.149:8000/llm/initialize', requestData);
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/initialize`, requestData);
         
         this.initializeMessage = 'LLM успешно инициализирован!';
         this.initializeStatus = true;
@@ -177,7 +177,7 @@ export default {
         console.log('Отправляемые данные на эндпоинт /create, путь директории:', dirPath);
         
         // Используем параметры запроса вместо JSON-тела
-        const response = await axios.post(`http://192.168.81.149:8000/directory/create?directory_path=${encodeURIComponent(dirPath)}`);
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/directory/create?directory_path=${encodeURIComponent(dirPath)}`);
         
         this.directoryMessage = 'Директория успешно создана!';
         this.directoryStatus = true;

@@ -202,7 +202,7 @@ export default {
   methods: {
     async fetchUsers() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/user/users');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/user/users`);
         this.users = response.data;
       } catch (error) {
         console.error('Ошибка при получении пользователей:', error);
@@ -210,7 +210,7 @@ export default {
     },
     async fetchDepartments() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/departments');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/departments`);
         this.departments = response.data;
       } catch (error) {
         console.error('Ошибка при получении отделов:', error);
@@ -218,7 +218,7 @@ export default {
     },
     async fetchAccessLevels() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/access-levels');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/access-levels`);
         this.accessLevels = response.data;
       } catch (error) {
         console.error('Ошибка при получении уровней доступа:', error);
@@ -252,7 +252,7 @@ export default {
     },
     async updateUser() {
       try {
-        await axios.put(`http://192.168.81.149:8000/user/user/${this.editingUser.id}`, {
+        await axios.put(`${import.meta.env.VITE_API_URL}/user/user/${this.editingUser.id}`, {
           department_id: this.editingUser.department_id,
           access_id: this.editingUser.access_id
         });
@@ -277,7 +277,7 @@ export default {
       }
       
       try {
-        await axios.put(`http://192.168.81.149:8000/user/user/${this.editingUser.id}/password`, {
+        await axios.put(`${import.meta.env.VITE_API_URL}/user/user/${this.editingUser.id}/password`, {
           password: this.newPassword
         });
         
@@ -289,7 +289,7 @@ export default {
     },
     async deleteUser() {
       try {
-        await axios.delete(`http://192.168.81.149:8000/user/user/${this.deletingUser.id}`);
+        await axios.delete(`${import.meta.env.VITE_API_URL}/user/user/${this.deletingUser.id}`);
         this.deleteModal.hide();
         await this.fetchUsers();
       } catch (error) {

@@ -109,7 +109,7 @@ export default {
         this.errorMessage = "";
         console.log("Логин перед отправкой:", this.login);
         console.log("Пароль перед отправкой:", this.password);
-        const response = await axios.post("http://192.168.81.149:8000/user/login", {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/login`, {
           login: this.login,
           password: this.password
         }, {

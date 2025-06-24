@@ -300,7 +300,7 @@ export default {
     async fetchQuizzes() {
       try {
         this.loading = true;
-        const response = await axios.get(`http://192.168.81.149:8000/quiz/list?user_id=${this.userId}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/list?user_id=${this.userId}`);
         this.quizzes = response.data;
         this.loading = false;
       } catch (error) {
@@ -337,7 +337,7 @@ export default {
         this.quizModal.show();
         
         // Получаем детали теста/анкеты
-        const response = await axios.get(`http://192.168.81.149:8000/quiz/${quiz.id}?user_id=${this.userId}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/${quiz.id}?user_id=${this.userId}`);
         this.currentQuiz = response.data;
         
         // Инициализируем ответы
@@ -369,7 +369,7 @@ export default {
         }
         
         // Отправляем ответы
-        const response = await axios.post(`http://192.168.81.149:8000/quiz/attempt`, {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/quiz/attempt`, {
           quiz_id: this.currentQuiz.id,
           answers: formattedAnswers
         }, {
@@ -408,11 +408,11 @@ export default {
         this.resultsModal.show();
         
         // Получаем попытки пользователя
-        const attemptsResponse = await axios.get(`http://192.168.81.149:8000/quiz/attempts/${this.userId}?quiz_id=${quiz.id}`);
+        const attemptsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/attempts/${this.userId}?quiz_id=${quiz.id}`);
         this.userAttempts = attemptsResponse.data;
         
         // Получаем детали теста для отображения вопросов
-        const quizResponse = await axios.get(`http://192.168.81.149:8000/quiz/${quiz.id}?user_id=${this.userId}`);
+        const quizResponse = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/${quiz.id}?user_id=${this.userId}`);
         this.currentQuiz = quizResponse.data;
         
         this.resultsLoading = false;
@@ -430,7 +430,7 @@ export default {
     
     async viewAttemptDetails(attempt) {
       try {
-        const response = await axios.get(`http://192.168.81.149:8000/quiz/attempt/${attempt.id}?user_id=${this.userId}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/attempt/${attempt.id}?user_id=${this.userId}`);
         this.selectedAttempt = response.data;
       } catch (error) {
         console.error("Ошибка при загрузке деталей попытки:", error);

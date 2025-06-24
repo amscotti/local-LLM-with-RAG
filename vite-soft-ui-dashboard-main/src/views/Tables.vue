@@ -832,7 +832,7 @@ export default {
     // Получение списка отделов
     async fetchDepartments() {
       try {
-        const response = await axios.get(`http://192.168.81.149:8000/api/departments`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/departments`);
         this.departments = response.data;
       } catch (error) {
         console.error('Ошибка при получении отделов:', error);
@@ -843,7 +843,7 @@ export default {
     // Получение списка уровней доступа
     async fetchAccessLevels() {
       try {
-        const response = await axios.get(`http://192.168.81.149:8000/api/access_levels`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/access_levels`);
         this.accessLevels = response.data;
       } catch (error) {
         console.error('Ошибка при получении отделов:', error);
@@ -854,7 +854,7 @@ export default {
     // Получение списка моделей LLM
     async fetchLLMModels() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/llm/models/llm');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/llm/models/llm`);
         if (response.data && response.data.models) {
           this.llmModels = response.data.models;
         } else {
@@ -881,7 +881,7 @@ export default {
     // Получение списка моделей эмбеддингов
     async fetchEmbeddingModels() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/llm/models/embedding');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/llm/models/embedding`);
         if (response.data && response.data.models) {
           this.embeddingModels = response.data.models;
         } else {
@@ -906,7 +906,7 @@ export default {
     // Получение списка тегов
     async fetchTags() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/tags');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/tags`);
         this.tags = response.data.tags;
       } catch (error) {
         console.error('Ошибка при получении тегов:', error);
@@ -916,7 +916,7 @@ export default {
     // Получение списка всего контента
     async fetchAllContent() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/content/all');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/content/all`);
         this.contentList = response.data;
       } catch (error) {
         console.error('Ошибка при получении списка контента:', error);
@@ -927,7 +927,7 @@ export default {
     // Регистрация пользователя
     async registerUser() {
       try {
-        const response = await axios.post('http://192.168.81.149:8000/user/register', this.registerForm);
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/register`, this.registerForm);
         this.registerMessage = 'Пользователь успешно зарегистрирован!';
         this.registerStatus = true;
         
@@ -972,7 +972,7 @@ export default {
         
         // Отправляем запрос с параметрами в URL-строке
         const response = await axios.post(
-            `http://192.168.81.149:8000/content/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
+            `${import.meta.env.VITE_API_URL}/content/upload-content?title=${encodeURIComponent(this.contentForm.title)}` +
             `&description=${encodeURIComponent(this.contentForm.description)}` +
             `&access_id=${this.contentForm.access_level}` +
             `&department_id=${this.contentForm.department_id}` +
@@ -1021,7 +1021,7 @@ export default {
       if (!this.editForm.id) return;
       
       try {
-        const response = await axios.get(`http://192.168.81.149:8000/content/content/${this.editForm.id}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/content/content/${this.editForm.id}`);
         const content = response.data;
         
         this.editForm = {
@@ -1050,7 +1050,7 @@ export default {
           tag_id: this.editForm.tag_id
         };
         
-        const response = await axios.put(`http://192.168.81.149:8000/content/content/${this.editForm.id}`, requestData);
+        const response = await axios.put(`${import.meta.env.VITE_API_URL}/content/content/${this.editForm.id}`, requestData);
         
         this.editMessage = 'Контент успешно отредактирован!';
         this.editStatus = true;
@@ -1094,7 +1094,7 @@ export default {
           }
         });
         
-        const response = await axios.post('http://192.168.81.149:8000/quiz/create', quizData);
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/quiz/create`, quizData);
         this.quizMessage = 'Тест/анкета успешно создана!';
         this.quizStatus = true;
         
@@ -1133,7 +1133,7 @@ export default {
           params.department_id = this.quizFilter.department;
         }
         
-        const response = await axios.get('http://192.168.81.149:8000/quiz/list', { params });
+        const response = await axios.get('${import.meta.env.VITE_API_URL}/quiz/list', { params });
         this.quizzes = response.data;
       } catch (error) {
         this.quizzesError = error.response?.data?.detail || 'Ошибка при получении списка тестов/анкет';
@@ -1152,7 +1152,7 @@ export default {
         const currentUser = JSON.parse(localStorage.getItem('user')) || {};
         const userId = currentUser.id || 1;
         
-        const response = await axios.get(`http://192.168.81.149:8000/quiz/${id}?user_id=${userId}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/${id}?user_id=${userId}`);
         this.selectedQuiz = response.data;
         this.quizDetailsModal.show();
       } catch (error) {
@@ -1166,7 +1166,7 @@ export default {
     async deleteQuiz(id) {
       if (confirm('Вы уверены, что хотите удалить этот тест/анкету?')) {
         try {
-          const response = await axios.delete(`http://192.168.81.149:8000/quiz/${id}`);
+          const response = await axios.delete(`${import.meta.env.VITE_API_URL}/quiz/${id}`);
           this.quizMessage = 'Тест/анкета успешно удалена!';
           this.quizStatus = true;
           
@@ -1187,13 +1187,13 @@ export default {
       this.userAttempts = [];
       
       try {
-        const response = await axios.get(`http://192.168.81.149:8000/quiz/stats/${this.resultsQuizId}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/stats/${this.resultsQuizId}`);
         this.quizStatistics = response.data;
         
         if (this.resultsUserId) {
           await this.fetchUserAttempts();
         } else {
-          const userAttemptsResponse = await axios.get(`http://192.168.81.149:8000/quiz/attempts?quiz_id=${this.resultsQuizId}`);
+          const userAttemptsResponse = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/attempts?quiz_id=${this.resultsQuizId}`);
           this.userAttempts = userAttemptsResponse.data;
         }
       } catch (error) {
@@ -1210,7 +1210,7 @@ export default {
       this.userAttempts = [];
       
       try {
-        let url = `http://192.168.81.149:8000/quiz/attempts/${this.resultsUserId}`;
+        let url = `${import.meta.env.VITE_API_URL}/quiz/attempts/${this.resultsUserId}`;
         if (this.resultsQuizId) {
           url += `?quiz_id=${this.resultsQuizId}`;
         }
@@ -1233,7 +1233,7 @@ export default {
         const currentUser = JSON.parse(localStorage.getItem('user')) || {};
         const userId = currentUser.id || 1;
         
-        const response = await axios.get(`http://192.168.81.149:8000/quiz/attempt/${id}?user_id=${userId}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/attempt/${id}?user_id=${userId}`);
         this.selectedAttempt = response.data;
         this.attemptDetailsModal.show();
       } catch (error) {
@@ -1411,7 +1411,7 @@ export default {
     // Получение списка пользователей
     async fetchUsers() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/users');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/users`);
         this.users = response.data;
       } catch (error) {
         console.error('Ошибка при получении списка пользователей:', error);
