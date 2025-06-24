@@ -73,20 +73,19 @@ const router = createRouter({
 
 // Защита маршрутов
 router.beforeEach((to, from, next) => {
-  // Проверяем, требует ли маршрут аутентификации
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const isGuest = to.matched.some(record => record.meta.guest);
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const userRole = parseInt(localStorage.getItem('role_id'));
 
-  // Проверяем состояние аутентификации
   if (requiresAuth && !isAuthenticated) {
-    // Перенаправляем на страницу входа, если пользователь не аутентифицирован
     next('/sign-in');
+  } else if (to.path === '/tables' && userRole !== 1) {
+    // Только пользователи с role_id = 1 (админы) имеют доступ к админской панели
+    next('/dashboard');
   } else if (isGuest && isAuthenticated) {
-    // Перенаправляем на дашборд, если пользователь уже аутентифицирован
     next('/dashboard');
   } else {
-    // Продолжаем переход по маршруту
     next();
   }
 });

@@ -11,7 +11,7 @@
           </template>
         </sidenav-collapse>
       </li>
-      <li class="nav-item">
+      <li class="nav-item" v-if="isAdmin">
         <sidenav-collapse nav-text="Админская панель" :to="{ name: 'Tables' }">
           <template #icon>
             <icon name="tables" />
@@ -114,6 +114,11 @@ export default {
       controls: "dashboardsExamples",
       isActive: "active",
     };
+  },
+  computed: {
+    isAdmin() {
+      return parseInt(localStorage.getItem('role_id')) === 1;
+    }
   },
   methods: {
     ...mapActions(['logout']),

@@ -125,6 +125,7 @@ export default {
         localStorage.setItem("userLogin", this.login);
         localStorage.setItem("userId", response.data.id);
         localStorage.setItem("departmentId", response.data.department_id);
+        localStorage.setItem("role_id", response.data.role_id);
         
         // Перенаправляем на панель управления
         this.router.push("/dashboard");
