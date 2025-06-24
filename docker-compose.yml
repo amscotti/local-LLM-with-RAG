@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server:/app
+      - ./server/5:/app/5
+    environment:
+      - DATABASE_URL=mysql+mysqlconnector://root:123123@db:3307/db
+      - PORT=8000
+      - HOST=0.0.0.0
+      - DEFAULT_LLM_MODEL=ilyagusev/saiga_llama3:latest
+      - DEFAULT_EMBEDDING_MODEL=snowflake-arctic-embed2:latest
+      - DOCUMENTS_PATH=/app/Research
+    depends_on:
+      - db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./vite-soft-ui-dashboard-main
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=123123
+      - MYSQL_DATABASE=db
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
