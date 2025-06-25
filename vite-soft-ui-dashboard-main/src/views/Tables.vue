@@ -1021,7 +1021,7 @@ export default {
       if (!this.editForm.id) return;
       
       try {
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/content/content/${this.editForm.id}`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/content/${this.editForm.id}`);
         const content = response.data;
         
         this.editForm = {
@@ -1050,7 +1050,7 @@ export default {
           tag_id: this.editForm.tag_id
         };
         
-        const response = await axios.put(`${import.meta.env.VITE_API_URL}/content/content/${this.editForm.id}`, requestData);
+        const response = await axios.put(`${import.meta.env.VITE_API_URL}/content/${this.editForm.id}`, requestData);
         
         this.editMessage = 'Контент успешно отредактирован!';
         this.editStatus = true;
