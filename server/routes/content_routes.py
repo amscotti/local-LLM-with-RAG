@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 import os
 from sqlalchemy.orm import Session
 from database import get_db
-from models_db import Access, Content
+from models_db import Access, Content, User
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 
@@ -257,4 +257,34 @@ async def view_file(content_id: int, db: Session = Depends(get_db)):
 
     # Возвращаем файл как ответ с заголовком для открытия в браузере
     return FileResponse(file_path, media_type=media_type, filename=os.path.basename(file_path), headers={"Content-Disposition": "inline"})
+
+@router.get("/user/{user_id}/content/by-tags/{tag_id}")
+async def get_user_content_by_tags_and_tag_id(user_id: int, tag_id: int, db: Session = Depends(get_db)):
+    try:
+        # Получаем пользователя по user_id
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+        # Получаем контент для данного тега с учетом прав доступа пользователя
+        tag_content = db.query(Content).filter(
+            Content.tag_id == tag_id,
+            Content.access_level == user.access_id,
+            Content.department_id == user.department_id
+        ).all()
+        
+        if not tag_content:
+            raise HTTPException(status_code=404, detail="Контент не найден")
+
+        return [
+            {
+                "id": content.id,
+                "title": content.title,
+                "description": content.description,
+                "file_path": content.file_path
+            }
+            for content in tag_content
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
