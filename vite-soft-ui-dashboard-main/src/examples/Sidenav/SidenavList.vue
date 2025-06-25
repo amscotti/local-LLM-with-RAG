@@ -11,6 +11,13 @@
           </template>
         </sidenav-collapse>
       </li>
+      <li class="nav-item">
+        <sidenav-collapse nav-text="Тесты и анкеты" :to="{ name: 'Quizzes' }">
+          <template #icon>
+            <i class="fas fa-clipboard-check text-primary"></i>
+          </template>
+        </sidenav-collapse>
+      </li>
       <li class="nav-item" v-if="isAdmin">
         <sidenav-collapse nav-text="Админская панель" :to="{ name: 'Tables' }">
           <template #icon>

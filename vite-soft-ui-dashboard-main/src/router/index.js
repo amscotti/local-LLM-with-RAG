@@ -7,6 +7,7 @@ import Profile from "@/views/Profile.vue";
 import Rtl from "@/views/Rtl.vue";
 import SignIn from "@/views/SignIn.vue";
 import SignUp from "@/views/SignUp.vue";
+import QuizPage from "@/views/QuizPage.vue";
 import store from "@/store";
 
 const routes = [
@@ -62,6 +63,12 @@ const routes = [
     name: "Sign Up",
     component: SignUp,
     meta: { guest: true }
+  },
+  {
+    path: "/quizzes",
+    name: "Quizzes",
+    component: QuizPage,
+    meta: { requiresAuth: true }
   },
 ];
 
