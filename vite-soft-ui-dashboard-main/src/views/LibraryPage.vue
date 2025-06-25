@@ -31,6 +31,14 @@
                     <div class="document-header">
                       <h6>{{ doc.title }}</h6>
                       <p>{{ doc.description }}</p>
+                      <div class="document-actions">
+                        <button class="btn btn-sm btn-outline-primary" @click="viewDocument(doc)">
+                          <i class="fas fa-eye me-1"></i> Просмотреть
+                        </button>
+                        <button class="btn btn-sm btn-outline-success ms-2" @click="downloadDocument(doc)">
+                          <i class="fas fa-download me-1"></i> Скачать
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -119,6 +127,14 @@ export default {
           tagName: tagName
         } 
       });
+    },
+    viewDocument(doc) {
+      // Открываем документ для просмотра
+      window.open(`${import.meta.env.VITE_API_URL}/content/view-file/${doc.id}`, '_blank');
+    },
+    downloadDocument(doc) {
+      // Скачиваем документ
+      window.location.href = `${import.meta.env.VITE_API_URL}/content/download-file/${doc.id}`;
     }
   }
 };
@@ -163,5 +179,8 @@ export default {
 }
 .document-header {
   font-weight: bold;
+}
+.document-actions {
+  margin-top: 10px;
 }
 </style> 
