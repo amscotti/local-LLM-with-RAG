@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Boolean, JSON
 from passlib.context import CryptContext
+from sqlalchemy.sql import func
 
 from sqlalchemy.orm import relationship
 from database import Base
@@ -19,6 +20,9 @@ class User(Base):
     department_id = Column(Integer)
     access_id = Column(Integer)
     auth_key = Column(String(255), nullable=True)  # Ключ аутентификации
+    full_name = Column(String(255), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, onupdate=func.now())
 
     def check_password(self, password: str) -> bool:
         """Проверка правильности пароля."""

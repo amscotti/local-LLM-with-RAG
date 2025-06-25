@@ -23,9 +23,10 @@
         </div>
         <div class="col-auto my-auto">
           <div class="h-100">
-            <h5 class="mb-1">{{ user.login }}</h5>
+            <h5 class="mb-1">{{ user.login }} - <span class="text-sm">{{ user.full_name }}</span></h5>
             <p class="mb-0 text-sm font-weight-bold">Отдел: {{ user.department_name }}</p>
             <p class="mb-0 text-sm font-weight-bold">Доступ: {{ user.access_name }}</p>
+            
           </div>
         </div>
         <div

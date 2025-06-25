@@ -19,6 +19,7 @@ class UserCreate(BaseModel):
     role_id: int
     department_id: int
     access_id: int
+    full_name: str = None
 
 @router.post("/register")
 async def register(user: UserCreate, db: Session = Depends(get_db)):
@@ -34,7 +35,8 @@ async def register(user: UserCreate, db: Session = Depends(get_db)):
         password=hashed_password,
         role_id=user.role_id,
         department_id=user.department_id,
-        access_id=user.access_id
+        access_id=user.access_id,
+        full_name=user.full_name
     )
 
     db.add(new_user)
@@ -90,6 +92,7 @@ async def get_user(id: int, db: Session = Depends(get_db)):
         "role_id": user.role_id,
         "department_name": department_name,
         "access_name": access_name,
+        "full_name": user.full_name
     }
 
 @router.get("/user/{user_id}/content")
