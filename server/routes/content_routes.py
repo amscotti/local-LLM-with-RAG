@@ -288,3 +288,52 @@ async def get_user_content_by_tags_and_tag_id(user_id: int, tag_id: int, db: Ses
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при получении контента: {str(e)}")
 
+@router.get("/search-documents")
+async def search_documents(
+    user_id: int,
+    search_query: str = None,
+    db: Session = Depends(get_db)
+):
+    try:
+        # Получаем пользователя по user_id для проверки прав доступа
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(status_code=404, detail="Пользователь не найден")
+        
+        # Базовый запрос с учетом прав доступа пользователя
+        query = db.query(Content).filter(
+            Content.access_level == user.access_id,
+            Content.department_id == user.department_id
+        )
+        
+        # Если указан поисковый запрос, добавляем условия поиска
+        if search_query:
+            from sqlalchemy import or_
+            # Поиск по названию, описанию или пути файла
+            query = query.filter(
+                or_(
+                    Content.title.ilike(f"%{search_query}%"),  # Поиск по названию
+                    Content.description.ilike(f"%{search_query}%"),  # Поиск по описанию
+                    Content.file_path.ilike(f"%{search_query}%")  # Поиск по пути файла (включая имя файла)
+                )
+            )
+        
+        # Выполняем запрос
+        contents = query.all()
+        
+        # Формируем результат
+        documents = [
+            {
+                "id": content.id,
+                "title": content.title,
+                "description": content.description,
+                "file_path": content.file_path,
+                "tag_id": content.tag_id
+            }
+            for content in contents
+        ]
+        
+        return {"documents": documents}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при поиске документов: {str(e)}")
+

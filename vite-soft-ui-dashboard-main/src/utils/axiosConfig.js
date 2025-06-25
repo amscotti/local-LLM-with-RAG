@@ -28,10 +28,18 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Добавляем userId как параметр запроса, если он есть в localStorage
+    // Добавляем userId как параметр запроса, если он есть в localStorage и еще не добавлен
     const userId = localStorage.getItem('userId');
-    if (userId && !config.params?.user_id) {
-      config.params = { ...config.params, user_id: userId };
+    if (userId) {
+      // Инициализируем params, если их нет
+      if (!config.params) {
+        config.params = {};
+      }
+      
+      // Добавляем user_id только если его еще нет в параметрах и URL не содержит user_id в пути
+      if (!config.params.user_id && !config.url.includes(`/user/${userId}/`)) {
+        config.params.user_id = userId;
+      }
     }
     
     // Логируем запрос в консоль в режиме разработки

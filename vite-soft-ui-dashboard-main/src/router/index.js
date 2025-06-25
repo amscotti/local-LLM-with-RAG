@@ -8,6 +8,8 @@ import Rtl from "@/views/Rtl.vue";
 import SignIn from "@/views/SignIn.vue";
 import SignUp from "@/views/SignUp.vue";
 import QuizPage from "@/views/QuizPage.vue";
+import LibraryPage from "@/views/LibraryPage.vue";
+import TagContentPage from "@/views/TagContentPage.vue";
 import store from "@/store";
 
 const routes = [
@@ -68,6 +70,18 @@ const routes = [
     path: "/quizzes",
     name: "Quizzes",
     component: QuizPage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: "/library",
+    name: "Library",
+    component: LibraryPage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: "/tag/:tagId/:tagName",
+    name: "TagContent",
+    component: TagContentPage,
     meta: { requiresAuth: true }
   },
 ];

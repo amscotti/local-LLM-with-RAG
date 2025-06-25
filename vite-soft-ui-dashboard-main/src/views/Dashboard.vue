@@ -143,9 +143,13 @@
       </div>
     </div>
 
-    <!-- Добавляем кнопку для перехода на страницу тестов -->
+    <!-- Добавляем кнопку для перехода на страницу библиотеки документов -->
     <div class="row mt-4">
       <div class="col-12 text-center">
+        <router-link to="/library" class="btn btn-info me-3">
+          <i class="fas fa-book me-2"></i>
+          Перейти в библиотеку документов
+        </router-link>
         <router-link to="/quizzes" class="btn btn-primary">
           <i class="fas fa-clipboard-check me-2"></i>
           Перейти к тестам и анкетам

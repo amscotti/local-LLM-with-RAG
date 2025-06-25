@@ -12,6 +12,13 @@
         </sidenav-collapse>
       </li>
       <li class="nav-item">
+        <sidenav-collapse nav-text="Библиотека" :to="{ name: 'Library' }">
+          <template #icon>
+            <i class="fas fa-book text-info"></i>
+          </template>
+        </sidenav-collapse>
+      </li>
+      <li class="nav-item">
         <sidenav-collapse nav-text="Тесты и анкеты" :to="{ name: 'Quizzes' }">
           <template #icon>
             <i class="fas fa-clipboard-check text-primary"></i>
