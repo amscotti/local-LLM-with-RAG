@@ -65,8 +65,14 @@
                           <button class="btn btn-sm btn-outline-success me-2" @click="viewDocument(doc)">
                             <i class="fas fa-eye"></i>
                           </button>
-                          <button class="btn btn-sm btn-outline-primary" @click="downloadDocument(doc)">
+                          <button class="btn btn-sm btn-outline-primary me-2" @click="downloadDocument(doc)">
                             <i class="fas fa-download"></i>
+                          </button>
+                          <button class="btn btn-sm btn-outline-info me-2" @click="copyLink(doc.id, 'view')">
+                            <i class="fas fa-share-alt"></i> Просмотр
+                          </button>
+                          <button class="btn btn-sm btn-outline-info" @click="copyLink(doc.id, 'download')">
+                            <i class="fas fa-share-alt"></i> Скачать
                           </button>
                         </td>
                       </tr>
@@ -108,12 +114,24 @@
         </div>
       </div>
     </div>
+
+    <!-- Всплывающее уведомление о копировании ссылки -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">
+      <div id="copyToast" class="toast align-items-center text-white bg-success" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+          <div class="toast-body">
+            Ссылка скопирована в буфер обмена!
+          </div>
+          <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
 import axios from 'axios';
-import { Modal } from 'bootstrap';
+import { Modal, Toast } from 'bootstrap';
 
 export default {
   name: "TagContentPage",
@@ -130,7 +148,8 @@ export default {
       currentMediaType: "",
       currentMediaTitle: "",
       isAudioFile: false,
-      isVideoFile: false
+      isVideoFile: false,
+      copyToast: null
     };
   },
   async created() {
@@ -148,6 +167,9 @@ export default {
   mounted() {
     // Инициализируем модальное окно
     this.mediaPlayerModal = new Modal(document.getElementById('mediaPlayerModal'));
+    
+    // Инициализируем toast для уведомлений
+    this.copyToast = new Toast(document.getElementById('copyToast'));
     
     // Добавляем обработчик события закрытия модального окна
     document.getElementById('mediaPlayerModal').addEventListener('hidden.bs.modal', () => {
@@ -224,6 +246,32 @@ export default {
         window.location.href = `${import.meta.env.VITE_API_URL}/content/download-file/${doc.id}`;
       } catch (error) {
         console.error("Ошибка при скачивании документа:", error);
+      }
+    },
+    copyLink(docId, action) {
+      const url = action === 'view' 
+        ? `${import.meta.env.VITE_API_URL}/content/view-file/${docId}` 
+        : `${import.meta.env.VITE_API_URL}/content/download-file/${docId}`;
+      
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          alert('Ссылка скопирована в буфер обмена!');
+        }).catch(err => {
+          console.error('Ошибка при копировании ссылки:', err);
+        });
+      } else {
+        // Альтернативный метод копирования для старых браузеров
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          document.execCommand('copy');
+          alert('Ссылка скопирована в буфер обмена!');
+        } catch (err) {
+          console.error('Ошибка при копировании ссылки:', err);
+        }
+        document.body.removeChild(textarea);
       }
     },
     getFileIconClass(filePath) {
