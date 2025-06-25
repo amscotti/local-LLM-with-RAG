@@ -7,7 +7,7 @@
             <div class="d-flex justify-content-between align-items-center">
               <h6>Тестирование и анкетирование</h6>
               <div>
-                <button class="btn btn-sm btn-primary me-2" @click="showQuizzes(true)">
+                <button class="btn btn-sm btn-primary me-2" style="" @click="showQuizzes(true)">
                   Тесты
                 </button>
                 <button class="btn btn-sm btn-info" @click="showQuizzes(false)">
