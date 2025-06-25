@@ -34,9 +34,9 @@
       </li>
       <li class="nav-item">
         <sidenav-collapse nav-text="Чат" :to="{ name: 'Billing' }">
-          <template #icon>
+          <!-- <template #icon>
             <icon name="billing" />
-          </template>
+          </template> -->
         </sidenav-collapse>
       </li>
 

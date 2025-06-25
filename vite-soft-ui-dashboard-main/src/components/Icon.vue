@@ -1,6 +1,6 @@
 <template>
   <!-- dashboard - shop icon -->
-  <svg
+  <!-- <svg
     v-if="name === 'dashboard'"
     width="12px"
     height="12px"
@@ -28,7 +28,7 @@
         </g>
       </g>
     </g>
-  </svg>
+  </svg> -->
   <svg
     v-if="name === 'virtual-reality'"
     width="12px"
