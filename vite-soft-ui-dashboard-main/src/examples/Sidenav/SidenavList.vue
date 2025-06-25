@@ -58,7 +58,7 @@
         <h6
           class="text-xs ps-4 text-uppercase font-weight-bolder opacity-6"
           :class="$store.state.isRTL ? 'me-4' : 'ms-2'"
-        >СТРАНИЦЫ</h6>
+        >Аккаунт</h6>
       </li>
       <li class="nav-item">
         <sidenav-collapse nav-text="Профиль" :to="{ name: 'Profile' }">
