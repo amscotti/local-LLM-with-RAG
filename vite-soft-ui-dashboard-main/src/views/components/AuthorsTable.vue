@@ -19,9 +19,9 @@
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                 Пользователь
               </th>
-              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+              <!-- <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                 Роль
-              </th>
+              </th> -->
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                 Отдел
               </th>
@@ -40,9 +40,9 @@
                   </div>
                 </div>
               </td>
-              <td>
+              <!-- <td>
                 <p class="text-xs font-weight-bold mb-0">{{ user.role_name }}</p>
-              </td>
+              </td> -->
               <td>
                 <p class="text-xs font-weight-bold mb-0">{{ user.department_name }}</p>
               </td>
@@ -50,13 +50,13 @@
                 <p class="text-xs font-weight-bold mb-0">{{ user.access_name }}</p>
               </td>
               <td class="align-middle">
-                <button @click="openEditModal(user)" class="btn btn-link text-secondary mb-0">
+                <button @click="openEditModal(user)" class="btn btn-link text-secondary mb-0" title="Редактировать пользователя">
                   <i class="fa fa-edit text-xs"></i>
                 </button>
-                <button @click="openPasswordModal(user)" class="btn btn-link text-secondary mb-0">
+                <button @click="openPasswordModal(user)" class="btn btn-link text-secondary mb-0" title="Сменить пароль пользователя">
                   <i class="fa fa-key text-xs"></i>
                 </button>
-                <button @click="confirmDeleteUser(user)" class="btn btn-link text-danger mb-0">
+                <button @click="confirmDeleteUser(user)" class="btn btn-link text-danger mb-0" title="Удалить пользователя">
                   <i class="fa fa-trash text-xs"></i>
                 </button>
               </td>
