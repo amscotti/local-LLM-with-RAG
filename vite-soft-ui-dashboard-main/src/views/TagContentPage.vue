@@ -11,6 +11,13 @@
                 Назад к библиотеке
               </router-link>
             </div>
+            <input
+              type="text"
+              class="form-control mt-2"
+              v-model="searchQuery"
+              @input="searchDocuments"
+              placeholder="Поиск по названию, описанию или имени файла"
+            />
           </div>
           <div class="card-body px-0 pt-0 pb-2">
             <div class="p-4">
@@ -149,7 +156,8 @@ export default {
       currentMediaTitle: "",
       isAudioFile: false,
       isVideoFile: false,
-      copyToast: null
+      copyToast: null,
+      searchQuery: "" // Поле для хранения поискового запроса
     };
   },
   async created() {
@@ -206,11 +214,23 @@ export default {
         this.loading = false;
       }
     },
+    searchDocuments() {
+      if (this.searchQuery.length > 0) {
+        this.documents = this.documents.filter(doc =>
+          doc.title.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          (doc.description && doc.description.toLowerCase().includes(this.searchQuery.toLowerCase())) ||
+          this.getFileName(doc.file_path).toLowerCase().includes(this.searchQuery.toLowerCase())
+        );
+      } else {
+        // Если поле поиска пустое, загружаем все документы заново
+        this.fetchTagContent();
+      }
+    },
     getFileName(filePath) {
       if (!filePath) return 'Имя файла недоступно';
       
       // Разделяем путь по слешам и берем последний элемент
-      const parts = filePath.split(/[\/\\]/); // Разделяем по / или \
+      const parts = filePath.split(/[\/]/); // Разделяем по / или \ 
       return parts[parts.length - 1];
     },
     viewDocument(doc) {
