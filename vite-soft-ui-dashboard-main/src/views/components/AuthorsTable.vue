@@ -19,6 +19,9 @@
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                 Пользователь
               </th>
+              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                ФИО
+              </th>
               <!-- <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                 Роль
               </th> -->
@@ -39,6 +42,9 @@
                     <h6 class="mb-0 text-sm">{{ user.login }}</h6>
                   </div>
                 </div>
+              </td>
+              <td>
+                <p class="text-xs font-weight-bold mb-0">{{ user.full_name }}</p>
               </td>
               <!-- <td>
                 <p class="text-xs font-weight-bold mb-0">{{ user.role_name }}</p>

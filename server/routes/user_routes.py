@@ -69,7 +69,7 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
         "auth_key": auth_key,
         "role_id": user.role_id,
         "department_id": user.department_id,
-        "access_id": user.access_id
+        "access_id": user.access_id,
     }
 
 
@@ -162,6 +162,7 @@ async def get_users(db: Session = Depends(get_db)):
                 "role_id": user.role_id,
                 "department_name": department_name,
                 "access_name": access_name,
+                "full_name": user.full_name
             })
 
         return user_list
