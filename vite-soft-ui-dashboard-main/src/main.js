@@ -17,6 +17,7 @@ import store from "./store";
 import router from "./router";
 import "./assets/css/nucleo-icons.css";
 import "./assets/css/nucleo-svg.css";
+import "./assets/css/custom.css";
 import SoftUIDashboard from "./soft-ui-dashboard";
 import axios from 'axios';
 import axiosInstance from './utils/axiosConfig';

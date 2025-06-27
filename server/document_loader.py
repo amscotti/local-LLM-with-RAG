@@ -12,6 +12,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 PERSIST_DIRECTORY = "storage"
 TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324)
+# Получение URL для Ollama из переменной окружения или использование значения по умолчанию
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 def vec_search(embedding_model, query, db, n_top_cos: int = 5):
     """
@@ -59,7 +61,7 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     if os.path.exists(department_directory) and not reload:
         print(f"Загрузка существующей базы данных Chroma для отдела {department_id}...")
         db = Chroma(
-            embedding_function=OllamaEmbeddings(model=model_name),
+            embedding_function=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
             persist_directory=department_directory
         )
         return db
@@ -73,7 +75,7 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     if os.path.exists(department_directory):
         try:
             db = Chroma(
-                embedding_function=OllamaEmbeddings(model=model_name),
+                embedding_function=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
                 persist_directory=department_directory
             )
             # Получаем список файлов, которые уже есть в базе
@@ -105,13 +107,13 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
         # Возвращаем существующую базу данных
         if os.path.exists(department_directory):
             return Chroma(
-                embedding_function=OllamaEmbeddings(model=model_name),
+                embedding_function=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
                 persist_directory=department_directory
             )
         # Если директории нет, но и новых документов нет - создаем пустую базу
         return Chroma.from_documents(
             documents=[],
-            embedding=OllamaEmbeddings(model=model_name),
+            embedding=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
             persist_directory=department_directory
         )
     
@@ -125,7 +127,7 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     # Если директория существует, добавляем к существующей базе
     if os.path.exists(department_directory):
         db = Chroma(
-            embedding_function=OllamaEmbeddings(model=model_name),
+            embedding_function=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
             persist_directory=department_directory
         )
         db.add_documents(documents)
@@ -134,7 +136,7 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
         # Иначе создаем новую базу
         return Chroma.from_documents(
             documents=documents,
-            embedding=OllamaEmbeddings(model=model_name),
+            embedding=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
             persist_directory=department_directory
         )
 

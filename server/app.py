@@ -3,6 +3,9 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, Query, AP
 from pydantic import BaseModel
 import uvicorn
 import os
+
+# Получение URL для Ollama из переменной окружения или использование значения по умолчанию
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 from sqlalchemy import create_engine, text, inspect, or_
 from sqlalchemy.orm import sessionmaker, Session
 from passlib.context import CryptContext
@@ -140,7 +143,7 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
         # Сохраняем базу данных для этого отдела
         department_dbs[department_id] = department_db
         # Инициализируем модель встраивания для векторного поиска
-        embedding_model = OllamaEmbeddings(model=embedding_model_name)
+        embedding_model = OllamaEmbeddings(model=embedding_model_name, base_url=OLLAMA_HOST)
         department_embedding_models[department_id] = embedding_model
         print(f"База данных для отдела {department_id} успешно инициализирована.")
     except FileNotFoundError as e:
@@ -149,7 +152,7 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
 
     try:
         print("Создание LLM...")
-        llm = ChatOllama(model=llm_model_name)
+        llm = ChatOllama(model=llm_model_name, base_url=OLLAMA_HOST)
         department_chat = getChatChain(llm, department_dbs[department_id])
         department_chats[department_id] = department_chat
         print(f"LLM для отдела {department_id} успешно инициализирован.")
@@ -178,7 +181,7 @@ def main(llm_model_name: str, embedding_model_name: str, documents_path: str, de
     if web_mode:
         print(f"Запуск HTTP сервера на порту {port}...")
         print(f"Swagger UI доступен по адресу: http://0.0.0.0:{port}/docs")  # Отладочное сообщение
-        uvicorn.run(app, host="0.0.0.0", port=port)
+        uvicorn.run(app, host="0.0.0.0", port=port, access_log=True)
         print("Сервер успешно запущен.")  # Отладочное сообщение после запуска сервера
     else:
         # Консольный режим
