@@ -1457,7 +1457,7 @@ export default {
   box-shadow: 0 0 0 0.2rem rgba(130, 214, 22, 0.25);
 }
 .btn-info {
-  background-color: #173376;
+  background-color: #172d76;
   border-color: #7b7b7b;
 }
 .bg-gradient-info {
