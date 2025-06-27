@@ -105,7 +105,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary" @click="updateUser">Сохранить</button>
+          <button type="button" class="btn btn-info" @click="updateUser">Сохранить</button>
         </div>
       </div>
     </div>
@@ -134,7 +134,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary" @click="updatePassword">Сохранить</button>
+          <button type="button" class="btn btn-info" @click="updatePassword">Сохранить</button>
         </div>
       </div>
     </div>

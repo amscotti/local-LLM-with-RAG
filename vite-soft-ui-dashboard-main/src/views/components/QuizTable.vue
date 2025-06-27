@@ -7,10 +7,10 @@
             <div class="d-flex justify-content-between align-items-center">
               <h6>Тестирование и анкетирование</h6>
               <div>
-                <button class="btn btn-sm btn-primary me-2" style="" @click="showQuizzes(true)">
+                <button class="btn btn-sm btn-info me-2"  @click="showQuizzes(true)">
                   Тесты
                 </button>
-                <button class="btn btn-sm btn-info" @click="showQuizzes(false)">
+                <button class="btn btn-sm btn-info"  @click="showQuizzes(false)">
                   Анкеты
                 </button>
               </div>
@@ -47,7 +47,7 @@
                     <td>
                       <div class="d-flex px-2 py-1">
                         <div>
-                          <i class="fas me-3" :class="quiz.is_test ? 'fa-clipboard-check text-primary' : 'fa-clipboard-list text-info'"></i>
+                          
                         </div>
                         <div class="d-flex flex-column justify-content-center">
                           <h6 class="mb-0 text-sm">{{ quiz.title }}</h6>
@@ -58,16 +58,16 @@
                       <p class="text-xs text-secondary mb-0">{{ quiz.description || 'Нет описания' }}</p>
                     </td>
                     <td>
-                      <span class="badge bg-gradient-success">{{ quiz.question_count }}</span>
+                      <span class="badge bg-gradient-info">{{ quiz.question_count }}</span>
                     </td>
                     <td>
                       <span class="text-secondary text-xs font-weight-bold">{{ formatDate(quiz.created_at) }}</span>
                     </td>
                     <td class="align-middle">
-                      <button class="btn btn-sm btn-success me-2" @click="startQuiz(quiz)">
+                      <button class="btn btn-sm btn-primary me-2" @click="startQuiz(quiz)">
                         <i class="fas fa-play me-1"></i> Пройти
                       </button>
-                      <button v-if="quiz.is_test" class="btn btn-sm btn-info" @click="viewResults(quiz)">
+                      <button v-if="quiz.is_test" class="btn btn-sm btn-primary" @click="viewResults(quiz)">
                         <i class="fas fa-chart-bar me-1"></i> Результаты
                       </button>
                     </td>
@@ -481,8 +481,19 @@ export default {
 </script>
 
 <style scoped>
-.form-check-input:checked {
-  background-color: #5e72e4;
-  border-color: #5e72e4;
+.btn-primary {
+  background-color: #3c6498;
+  border-color: #7b7b7b;
 }
+.btn-info {
+  background-color: #173376;
+  border-color: #7b7b7b;
+}
+.form-check-input:checked {
+  background-color: #3c6498;
+  border-color: #3c6498;
+}
+/* .text-info {
+  background-color: #173376;
+} */
 </style>

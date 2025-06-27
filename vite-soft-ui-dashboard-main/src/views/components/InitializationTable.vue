@@ -69,7 +69,7 @@
               <small class="text-muted">Укажите путь, где должна быть создана директория</small>
             </div>
           </div>
-          <button type="submit" class="btn bg-gradient-success" :disabled="isCreatingDirectory">
+          <button type="submit" class="btn btn-info" :disabled="isCreatingDirectory">
             <span v-if="isCreatingDirectory" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
             {{ isCreatingDirectory ? 'Создание...' : 'Создать директорию' }}
           </button>
@@ -220,5 +220,9 @@ export default {
   font-size: 0.875rem;
   font-weight: 600;
   margin-bottom: 0.5rem;
+}
+.btn-info {
+  background-color: #173376;
+  border-color: #7b7b7b;
 }
 </style>

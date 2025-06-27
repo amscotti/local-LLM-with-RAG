@@ -55,7 +55,7 @@
                         <i class="fas fa-download"></i>
                       </button>
                       <div class="dropdown ms-1">
-                        <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'view')">
+                        <button class="btn btn-sm btn-outline-infо ms-1" @click="copyLink(doc.id, 'view')">
                           <i class="fas fa-share-alt"></i> Просмотр
                         </button>
                         <button class="btn btn-sm btn-outline-info ms-1" @click="copyLink(doc.id, 'download')">
@@ -150,7 +150,7 @@
           <i class="fas fa-book me-2"></i>
           Перейти в библиотеку документов
         </router-link>
-        <router-link to="/quizzes" class="btn btn-primary">
+        <router-link to="/quizzes" class="btn btn-info">
           <i class="fas fa-clipboard-check me-2"></i>
           Перейти к тестам и анкетам
         </router-link>
@@ -450,4 +450,9 @@ export default {
 .highlight {
   background-color: #d1e7dd; /* Цвет фона для подсветки */
 }
+.btn-info {
+  background-color: #173376;
+  border-color: #7b7b7b;
+}
+
 </style>

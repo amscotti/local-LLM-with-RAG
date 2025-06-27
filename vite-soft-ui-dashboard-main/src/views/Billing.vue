@@ -61,7 +61,8 @@
                       :disabled="isLoading"
                     >
                     <button 
-                      class="btn bg-gradient-primary mb-0" 
+                      class="btn btn-info mb-0" 
+                      style="background-color: #173376; border-color: #7b7b7b; color: #fff;"
                       @click="sendMessage"
                       :disabled="isLoading || !userMessage.trim()"
                     >

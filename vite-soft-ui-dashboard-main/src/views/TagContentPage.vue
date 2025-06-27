@@ -6,7 +6,7 @@
           <div class="card-header pb-0">
             <div class="d-flex justify-content-between align-items-center">
               <h6>{{ tagName }}</h6>
-              <router-link to="/library" class="btn btn-sm btn-outline-primary">
+              <router-link to="/library" class="btn btn-sm btn-">
                 <i class="fas fa-arrow-left me-2"></i>
                 Назад к библиотеке
               </router-link>
@@ -69,10 +69,10 @@
                           <p class="text-xs text-secondary mb-0">{{ getFileName(doc.file_path) }}</p>
                         </td>
                         <td class="align-middle">
-                          <button class="btn btn-sm btn-outline-success me-2" @click="viewDocument(doc)">
+                          <button class="btn btn-sm btn-outline-secondary me-2" @click="viewDocument(doc)">
                             <i class="fas fa-eye"></i>
                           </button>
-                          <button class="btn btn-sm btn-outline-primary me-2" @click="downloadDocument(doc)">
+                          <button class="btn btn-sm btn-outline-secondary me-2" @click="downloadDocument(doc)">
                             <i class="fas fa-download"></i>
                           </button>
                           <button class="btn btn-sm btn-outline-info me-2" @click="copyLink(doc.id, 'view')">

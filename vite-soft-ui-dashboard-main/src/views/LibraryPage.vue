@@ -32,10 +32,10 @@
                       <h6>{{ doc.title }}</h6>
                       <p>{{ doc.description }}</p>
                       <div class="document-actions">
-                        <button class="btn btn-sm btn-outline-primary" @click="viewDocument(doc)">
+                        <button class="btn btn-sm btn-info" @click="viewDocument(doc)">
                           <i class="fas fa-eye me-1"></i> Просмотреть
                         </button>
-                        <button class="btn btn-sm btn-outline-success ms-2" @click="downloadDocument(doc)">
+                        <button class="btn btn-sm btn-info ms-2" @click="downloadDocument(doc)">
                           <i class="fas fa-download me-1"></i> Скачать
                         </button>
                       </div>
@@ -182,5 +182,9 @@ export default {
 }
 .document-actions {
   margin-top: 10px;
+}
+.btn-info {
+  background-color: #173376;
+  border-color: #7b7b7b;
 }
 </style> 

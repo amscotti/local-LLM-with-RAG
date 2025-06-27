@@ -56,7 +56,7 @@
       </li> -->
       <li class="mt-3 nav-item">
         <h6
-          class="text-xs ps-4 text-uppercase font-weight-bolder opacity-6"
+          class="text-xs ps-4 text-uppercase font-weight-bolder "
           :class="$store.state.isRTL ? 'me-4' : 'ms-2'"
         >Аккаунт</h6>
       </li>

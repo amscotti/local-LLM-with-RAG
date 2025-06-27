@@ -78,7 +78,7 @@
                       </select>
                     </div>
                   </div>
-                  <button type="submit" class="btn bg-gradient-success">Зарегистрировать</button>
+                  <button type="submit" class="btn btn-info">Зарегистрировать</button>
                   <div v-if="registerMessage" :class="['alert', registerStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
                     {{ registerMessage }}
                   </div>
@@ -137,7 +137,7 @@
                       <input type="file" class="form-control" id="file" @change="handleFileUpload" required>
                     </div>
                   </div>
-                  <button type="submit" class="btn bg-gradient-success">Загрузить</button>
+                  <button type="submit" class="btn btn-info">Загрузить</button>
                   <div v-if="uploadMessage" :class="['alert', uploadStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
                     {{ uploadMessage }}
                   </div>
@@ -203,7 +203,7 @@
                       </select>
                     </div>
                   </div>
-                  <button type="submit" class="btn bg-gradient-success">Сохранить изменения</button>
+                  <button type="submit" class="btn btn-info">Сохранить изменения</button>
                   <div v-if="editMessage" :class="['alert', editStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
                     {{ editMessage }}
                   </div>
@@ -346,7 +346,7 @@
                         </button>
                       </div>
                       
-                      <button type="submit" class="btn bg-gradient-success" :disabled="quizForm.questions.length === 0">Создать тест/анкету</button>
+                      <button type="submit" class="btn bg-gradient-info" :disabled="quizForm.questions.length === 0">Создать тест/анкету</button>
                       <div v-if="quizMessage" :class="['alert', quizStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
                         {{ quizMessage }}
                       </div>
@@ -421,7 +421,7 @@
                             <td>{{ quiz.question_count }}</td>
                             <td>{{ formatDate(quiz.created_at) }}</td>
                             <td>
-                              <button class="btn btn-sm btn-info me-2" @click="viewQuizDetails(quiz.id)">
+                              <button class="btn btn-sm btn-primary me-2" @click="viewQuizDetails(quiz.id)">
                                 <i class="fas fa-eye"></i>
                               </button>
                               <button class="btn btn-sm btn-danger" @click="deleteQuiz(quiz.id)">
@@ -1455,5 +1455,13 @@ export default {
   border-color: #82d616;
   outline: 0;
   box-shadow: 0 0 0 0.2rem rgba(130, 214, 22, 0.25);
+}
+.btn-info {
+  background-color: #173376;
+  border-color: #7b7b7b;
+}
+.bg-gradient-info {
+  background-color: #173376;
+  border-color: #7b7b7b;
 }
 </style>
