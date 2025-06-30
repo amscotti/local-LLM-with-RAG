@@ -26,6 +26,7 @@ from routes.directory_routes import router as directory_router  # Импорти
 from routes.llm_routes import router as llm_router  # Импортируйте ваш маршрутизатор
 from routes.content_routes import router as content_router
 from routes.user_routes import router as user_router
+from routes.feedback_routes import router as feedback_router
 
 # Инициализация глобальных переменных
 app = FastAPI()
@@ -44,6 +45,7 @@ app.include_router(directory_router)
 app.include_router(llm_router)  # Добавьте маршрутизатор для LL
 app.include_router(content_router)
 app.include_router(user_router)
+app.include_router(feedback_router)
 
 # Словари для хранения экземпляров чатов и баз данных для каждого отдела
 department_chats = {}  # {department_id: chat_instance}

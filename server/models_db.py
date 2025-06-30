@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime, Boolean, JSON, LargeBinary
 from passlib.context import CryptContext
 from sqlalchemy.sql import func
 
@@ -125,3 +125,13 @@ class UserAnswer(Base):
     attempt = relationship("UserQuizAttempt", back_populates="answers")
     question = relationship("Question", back_populates="user_answers")
 
+class Feedback(Base):
+    __tablename__ = 'feedback'
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)  # ID пользователя
+    text = Column(String(255), nullable=False)  # Текст отзыва
+    photo = Column(LargeBinary, nullable=True)  # Фото в формате blob
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = relationship("User")
