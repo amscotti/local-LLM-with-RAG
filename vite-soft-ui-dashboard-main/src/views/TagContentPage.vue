@@ -6,7 +6,7 @@
           <div class="card-header pb-0">
             <div class="d-flex justify-content-between align-items-center">
               <h6>{{ tagName }}</h6>
-              <router-link to="/library" class="btn btn-sm btn-info" ">
+              <router-link to="/library" class="btn btn-sm btn-info">
                 <i class="fas fa-arrow-left me-2"></i>
                 Назад к библиотеке
               </router-link>
