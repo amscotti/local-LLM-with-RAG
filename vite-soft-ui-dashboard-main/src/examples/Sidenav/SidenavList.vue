@@ -32,6 +32,13 @@
           </template>
         </sidenav-collapse>
       </li>
+      <li class="nav-item"  >
+        <sidenav-collapse nav-text="Обратная связь" :to="{ name: 'Feedback' }">
+          <template #icon>
+            <icon name="comment" />
+          </template>
+        </sidenav-collapse>
+      </li>
       <li class="nav-item">
         <sidenav-collapse nav-text="Чат" :to="{ name: 'Billing' }">
           <!-- <template #icon>

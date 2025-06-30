@@ -35,6 +35,9 @@
                 <button class="nav-link" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="false">Редактирование контента</button>
               </li>
               <li class="nav-item" role="presentation">
+                <button class="nav-link" id="feedback-tab" data-bs-toggle="tab" data-bs-target="#feedback" type="button" role="tab" aria-controls="feedback" aria-selected="false">Обратная связь</button>
+              </li>
+              <li class="nav-item" role="presentation">
                 <button class="nav-link" id="quiz-tab" data-bs-toggle="tab" data-bs-target="#quiz" type="button" role="tab" aria-controls="quiz" aria-selected="false">Тесты и анкеты</button>
               </li>
             </ul>
@@ -150,6 +153,11 @@
               <!-- Вкладка редактирования контента -->
               <div class="tab-pane fade" id="edit" role="tabpanel" aria-labelledby="edit-tab">
                 <ContentEditor :contentList="contentList" @content-updated="fetchAllContent" />
+              </div>
+              
+              <!-- Вкладка обратной связи -->
+              <div class="tab-pane fade" id="feedback" role="tabpanel" aria-labelledby="feedback-tab">
+                <FeedbackAdmin />
               </div>
               
               <!-- Вкладка тестов и анкет -->
@@ -645,6 +653,7 @@ import AuthorsTable from "./components/AuthorsTable.vue";
 import ContentTable from "./components/ContentTable.vue";
 import InitializationTable from "./components/InitializationTable.vue";
 import ContentEditor from "./components/ContentEditor.vue";
+import FeedbackAdmin from "./components/FeedbackAdmin.vue";
 import axios from 'axios';
 import * as bootstrap from 'bootstrap';
 
@@ -655,6 +664,7 @@ export default {
     ContentTable,
     InitializationTable,
     ContentEditor,
+    FeedbackAdmin
   },
   data() {
     return {

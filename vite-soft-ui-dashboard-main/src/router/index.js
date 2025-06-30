@@ -11,6 +11,7 @@ import QuizPage from "@/views/QuizPage.vue";
 import LibraryPage from "@/views/LibraryPage.vue";
 import TagContentPage from "@/views/TagContentPage.vue";
 import store from "@/store";
+import Feedback from "@/views/Feedback.vue";
 
 const routes = [
   {
@@ -83,6 +84,11 @@ const routes = [
     name: "TagContent",
     component: TagContentPage,
     meta: { requiresAuth: true }
+  },
+  {
+    path: "/feedback",
+    name: "Feedback",
+    component: Feedback,
   },
 ];
 
