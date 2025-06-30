@@ -187,4 +187,9 @@ export default {
   background-color: #173376;
   border-color: #7b7b7b;
 }
+.form-control:focus {
+  border-color: #5e72e4;
+  box-shadow: 0 0 0 0.2rem rgba(94, 114, 228, 0.25);
+}
+
 </style> 

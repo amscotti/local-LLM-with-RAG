@@ -1,16 +1,12 @@
 <template>
   <div class="card">
-    <div class="card-header pb-0">
+    <div class="card-header pb-0 pt-0">
       <div class="row">
         <div class="col-lg-6 col-7">
           <h6>Сообщения обратной связи</h6>
-          <p class="text-sm mb-0">
-            <i class="fa fa-check text-info" aria-hidden="true"></i>
-            <span class="font-weight-bold ms-1">Все сообщения от пользователей</span>
-          </p>
         </div>
         <div class="col-lg-6 col-5 my-auto text-end">
-          <button @click="fetchFeedbackList" class="btn btn-sm bg-gradient-info mb-0">
+          <button @click="fetchFeedbackList" class="btn btn-sm btn-info mb-0" style="background-color: #172d76;">
             <i class="fas fa-sync-alt me-2"></i>Обновить
           </button>
         </div>
@@ -308,3 +304,14 @@ export default {
   }
 };
 </script> 
+
+<style>
+.btn-info {
+  background-color: #172d76;
+  border-color: #7b7b7b;
+  &:hover {
+    background-color: #344785;
+    border-color: #7b7b7b;
+  }
+}
+</style>

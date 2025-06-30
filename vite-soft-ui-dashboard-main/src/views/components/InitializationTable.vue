@@ -49,8 +49,8 @@
               </div>
             </div>
           </div>
-          <button type="submit" class="btn bg-gradient-success" :disabled="!initializeForm.confirm || isInitializing">
-            <span v-if="isInitializing" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+          <button type="submit" class="btn btn-info" :disabled="!initializeForm.confirm || isInitializing">
+            <span v-if="isInitializing" class="spinner-border spinner-border-sm me-2" role="status" aria-visible="true"></span>
             {{ isInitializing ? 'Инициализация...' : 'Инициализировать LLM' }}
           </button>
           <div v-if="initializeMessage" :class="['alert', initializeStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
@@ -222,7 +222,11 @@ export default {
   margin-bottom: 0.5rem;
 }
 .btn-info {
-  background-color: #173376;
+  background-color: #172d76;
   border-color: #7b7b7b;
+  &:hover {
+    background-color: #344785;
+    border-color: #7b7b7b;
+  }
 }
 </style>

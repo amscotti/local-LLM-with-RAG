@@ -62,7 +62,7 @@
                     <div class="d-flex justify-content-end">
                       <button 
                         type="submit" 
-                        class="btn bg-gradient-info" 
+                        class="btn btn-info" 
                         :disabled="isSubmitting"
                       >
                         <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
@@ -193,5 +193,14 @@ export default {
 .form-control:focus {
   border-color: #5e72e4;
   box-shadow: 0 0 0 0.2rem rgba(94, 114, 228, 0.25);
+}
+
+.btn-info {
+  background-color: #172d76;
+  border-color: #7b7b7b;
+  &:hover {
+    background-color: #344785;
+    border-color: #7b7b7b;
+  }
 }
 </style> 

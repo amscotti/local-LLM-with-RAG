@@ -6,7 +6,7 @@
           <div class="card-header pb-0">
             <div class="d-flex justify-content-between align-items-center">
               <h6>{{ tagName }}</h6>
-              <router-link to="/library" class="btn btn-sm btn-">
+              <router-link to="/library" class="btn btn-sm btn-info" ">
                 <i class="fas fa-arrow-left me-2"></i>
                 Назад к библиотеке
               </router-link>
@@ -75,10 +75,10 @@
                           <button class="btn btn-sm btn-outline-secondary me-2" @click="downloadDocument(doc)">
                             <i class="fas fa-download"></i>
                           </button>
-                          <button class="btn btn-sm btn-outline-info me-2" @click="copyLink(doc.id, 'view')">
+                          <button class="btn btn-sm btn-info me-2" @click="copyLink(doc.id, 'view')">
                             <i class="fas fa-share-alt"></i> Просмотр
                           </button>
-                          <button class="btn btn-sm btn-outline-info" @click="copyLink(doc.id, 'download')">
+                          <button class="btn btn-sm btn-info" @click="copyLink(doc.id, 'download')">
                             <i class="fas fa-share-alt"></i> Скачать
                           </button>
                         </td>
@@ -342,4 +342,9 @@ export default {
 
 <style scoped>
 /* Дополнительные стили при необходимости */
+.btn-info {
+  background-color: #172d76;
+  border-color: #7b7b7b;
+
+}
 </style> 

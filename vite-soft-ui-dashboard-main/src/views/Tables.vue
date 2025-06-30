@@ -29,7 +29,7 @@
                 <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" aria-controls="upload" aria-selected="false">Загрузка контента</button>
               </li>
               <li class="nav-item" role="presentation">
-                <button class="nav-link" id="initialize-tab" data-bs-toggle="tab" data-bs-target="#initialize" type="button" role="tab" aria-controls="initialize" aria-selected="false">Инициализация LLM</button>
+                <button class="nav-link " id="initialize-tab" data-bs-toggle="tab" data-bs-target="#initialize" type="button" role="tab" aria-controls="initialize" aria-selected="false">Инициализация LLM</button>
               </li>
               <li class="nav-item" role="presentation">
                 <button class="nav-link" id="edit-tab" data-bs-toggle="tab" data-bs-target="#edit" type="button" role="tab" aria-controls="edit" aria-selected="false">Редактирование контента</button>
@@ -288,12 +288,12 @@
                       </div>
                       
                       <div class="mb-3">
-                        <button type="button" class="btn btn-outline-primary" @click="addQuestion">
+                        <button type="button" class="btn btn-info" @click="addQuestion">
                           <i class="fas fa-plus"></i> Добавить вопрос
                         </button>
                       </div>
                       
-                      <button type="submit" class="btn bg-gradient-info" :disabled="quizForm.questions.length === 0">Создать тест/анкету</button>
+                      <button type="submit" class="btn btn-info" :disabled="quizForm.questions.length === 0">Создать тест/анкету</button>
                       <div v-if="quizMessage" :class="['alert', quizStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
                         {{ quizMessage }}
                       </div>
@@ -1312,7 +1312,7 @@ export default {
 .nav-tabs .nav-link.active {
   color: #344767;
   font-weight: 600;
-  border-bottom: 2px solid #17c1e8;
+  border-bottom: 2px solid #172d76;
 }
 
 .form-label {
@@ -1341,6 +1341,10 @@ export default {
 .btn-info {
   background-color: #172d76;
   border-color: #7b7b7b;
+  &:hover {
+    background-color: #344785;
+    border-color: #7b7b7b;
+  }
 }
 .bg-gradient-info {
   background-color: #173376;

@@ -4,10 +4,7 @@
       <div class="row">
         <div class="col-lg-6 col-7">
           <h6>Управление тегами</h6>
-          <p class="text-sm mb-0">
-            <i class="fa fa-check text-info" aria-hidden="true"></i>
-            <span class="font-weight-bold ms-1">Создание, редактирование и удаление тегов</span>
-          </p>
+
         </div>
       </div>
     </div>
@@ -24,7 +21,7 @@
                 v-model="newTagName"
               >
               <button 
-                class="btn btn-success" 
+                class="btn btn-info" 
                 type="button" 
                 @click="createTag"
                 :disabled="!newTagName.trim()"
@@ -42,7 +39,7 @@
           <thead>
             <tr>
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
-                №
+              №
               </th>
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                 Название тега
@@ -69,7 +66,7 @@
                     v-model="editTagName" 
                     @keyup.enter="updateTag"
                   >
-                  <button class="btn btn-sm btn-info" @click="updateTag">
+                  <button class="btn btn-sm btn-info" @click="updateTag" style="background-color: #172d76;">
                     <i class="fas fa-save"></i>
                   </button>
                   <button class="btn btn-sm btn-secondary" @click="cancelEdit">
@@ -83,6 +80,7 @@
                   v-if="editingTagId !== tag.id" 
                   @click="startEdit(tag)" 
                   class="btn btn-sm btn-info me-1"
+                  style="background-color: #172d76;"
                 >
                   <i class="fas fa-edit"></i>
                 </button>
@@ -206,3 +204,13 @@ export default {
   }
 };
 </script> 
+<style>
+.btn-info {
+  background-color: #172d76;
+  border-color: #7b7b7b;
+  &:disabled {
+    background-color: #344785;
+    color: #ffffff;
+  }
+}
+</style>

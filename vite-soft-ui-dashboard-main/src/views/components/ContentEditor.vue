@@ -52,7 +52,7 @@
         >
           <div class="row mb-4 mt-4">
             <div class="col-12">
-              <div class="form-group">
+              <div class="form-group ">
                 <label for="content-select" class="form-label">Выберите контент для редактирования</label>
                 <select class="form-select" id="content-select" v-model="editForm.id" @change="loadContentForEdit">
                   <option value="">Выберите контент</option>
@@ -104,7 +104,7 @@
                 </select>
               </div>
             </div>
-            <button type="submit" class="btn btn-info">Сохранить изменения</button>
+            <button type="submit" class="btn btn-info" style="background-color: #172d76; border-color: #172d76;">Сохранить изменения</button>
             <div v-if="editMessage" :class="['alert', editStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
               {{ editMessage }}
             </div>
@@ -240,3 +240,19 @@ export default {
   }
 };
 </script> 
+
+<style >
+  .btn-info {
+  background-color: #172d76;
+  border-color: #7b7b7b;
+  &:hover {
+    background-color: #344785;
+    border-color: #7b7b7b;
+  }
+}
+
+.form-control:focus {
+  border-color: #5e72e4;
+  box-shadow: 0 0 0 0.2rem rgba(94, 114, 228, 0.25);
+}
+</style>
