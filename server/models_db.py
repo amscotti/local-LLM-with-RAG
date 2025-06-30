@@ -55,6 +55,11 @@ class Content(Base):
     department = relationship("Department")  # Связь с таблицей Department
     tag = relationship("Tag")  # Связь с таблицей Tag
 
+class Tag(Base):
+    __tablename__ = "tags"
+    id = Column(Integer, primary_key=True, index=True)
+    tag_name = Column(String(255), nullable=False)  # Название тега
+
 class ContentBase(BaseModel):
     id: int
     title: str
@@ -63,12 +68,6 @@ class ContentBase(BaseModel):
 
     class Config:
         orm_mode = True
-
-class Tag(Base):
-    __tablename__ = "tags"
-
-    id = Column(Integer, primary_key=True, index=True)
-    tag_name = Column(String(255), nullable=False)  # Название тега
 
 # Модели для системы тестирования и анкетирования
 class Quiz(Base):

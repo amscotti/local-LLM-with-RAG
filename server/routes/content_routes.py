@@ -2,9 +2,10 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 import os
 from sqlalchemy.orm import Session
 from database import get_db
-from models_db import Access, Content, User
+from models_db import Access, Content, User, Tag
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
+
 
 router = APIRouter(prefix="/content", tags=["content"])
 
@@ -337,3 +338,38 @@ async def search_documents(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка при поиске документов: {str(e)}")
 
+@router.post("/create-tag")
+async def create_tag(tag_name: str, db: Session = Depends(get_db)):
+    try:
+        new_tag = Tag(tag_name=tag_name)
+        db.add(new_tag)
+        db.commit()
+        db.refresh(new_tag)
+        return {"message": "Тег успешно создан", "tag": new_tag}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при создании тега: {str(e)}")
+
+@router.put("/update-tag/{tag_id}")
+async def update_tag(tag_id: int, tag_name: str, db: Session = Depends(get_db)):
+    try:
+        tag = db.query(Tag).filter(Tag.id == tag_id).first()
+        if tag is None:
+            raise HTTPException(status_code=404, detail="Тег не найден")
+        tag.tag_name = tag_name
+        db.commit()
+        db.refresh(tag)
+        return {"message": "Тег успешно обновлен", "tag": tag}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при обновлении тега: {str(e)}")
+
+@router.delete("/delete-tag/{tag_id}")
+async def delete_tag(tag_id: int, db: Session = Depends(get_db)):
+    try:
+        tag = db.query(Tag).filter(Tag.id == tag_id).first()
+        if tag is None: 
+            raise HTTPException(status_code=404, detail="Тег не найден")
+        db.delete(tag)
+        db.commit()
+        return {"message": "Тег успешно удален"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при удалении тега: {str(e)}") 
