@@ -12,17 +12,38 @@
         </sidenav-collapse>
       </li>
       <li class="nav-item">
+        <sidenav-collapse nav-text="Библиотека" :to="{ name: 'Library' }">
+          <template #icon>
+            <i class="fas fa-book text-info"></i>
+          </template>
+        </sidenav-collapse>
+      </li>
+      <li class="nav-item">
+        <sidenav-collapse nav-text="Тесты и анкеты" :to="{ name: 'Quizzes' }">
+          <template #icon>
+            <i class="fas fa-clipboard-check text-primary"></i>
+          </template>
+        </sidenav-collapse>
+      </li>
+      <li class="nav-item" v-if="isAdmin">
         <sidenav-collapse nav-text="Админская панель" :to="{ name: 'Tables' }">
           <template #icon>
             <icon name="tables" />
           </template>
         </sidenav-collapse>
       </li>
+      <li class="nav-item"  >
+        <sidenav-collapse nav-text="Обратная связь" :to="{ name: 'Feedback' }">
+          <template #icon>
+            <icon name="comment" />
+          </template>
+        </sidenav-collapse>
+      </li>
       <li class="nav-item">
         <sidenav-collapse nav-text="Чат" :to="{ name: 'Billing' }">
-          <template #icon>
+          <!-- <template #icon>
             <icon name="billing" />
-          </template>
+          </template> -->
         </sidenav-collapse>
       </li>
 
@@ -42,9 +63,9 @@
       </li> -->
       <li class="mt-3 nav-item">
         <h6
-          class="text-xs ps-4 text-uppercase font-weight-bolder opacity-6"
+          class="text-xs ps-4 text-uppercase font-weight-bolder "
           :class="$store.state.isRTL ? 'me-4' : 'ms-2'"
-        >СТРАНИЦЫ</h6>
+        >Аккаунт</h6>
       </li>
       <li class="nav-item">
         <sidenav-collapse nav-text="Профиль" :to="{ name: 'Profile' }">
@@ -114,6 +135,11 @@ export default {
       controls: "dashboardsExamples",
       isActive: "active",
     };
+  },
+  computed: {
+    isAdmin() {
+      return parseInt(localStorage.getItem('role_id')) === 1;
+    }
   },
   methods: {
     ...mapActions(['logout']),

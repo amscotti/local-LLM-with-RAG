@@ -18,7 +18,7 @@
             <div class="mx-auto col-xl-4 col-lg-5 col-md-6 d-flex flex-column">
               <div class="mt-8 card card-plain">
                 <div class="pb-0 card-header text-start">
-                  <h3 class="font-weight-bolder text-info text-gradient">Добро пожаловать</h3>
+                  <h3 class="font-weight-bolder  " style="color: #173376;">Добро пожаловать</h3>
                   <p class="mb-0">Введите логин и пароль для входа</p>
                 </div>
                 <div class="card-body">
@@ -32,7 +32,8 @@
                       <vsud-button
                         class="my-4 mb-2"
                         variant="gradient"
-                        color="info"
+                        style="background-color: #3c6498; color: #fff;"
+                        color=""
                         full-width
                         type="submit"
                       >Войти</vsud-button>
@@ -109,7 +110,7 @@ export default {
         this.errorMessage = "";
         console.log("Логин перед отправкой:", this.login);
         console.log("Пароль перед отправкой:", this.password);
-        const response = await axios.post("http://192.168.81.149:8000/login", {
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/login`, {
           login: this.login,
           password: this.password
         }, {
@@ -124,6 +125,8 @@ export default {
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("userLogin", this.login);
         localStorage.setItem("userId", response.data.id);
+        localStorage.setItem("departmentId", response.data.department_id);
+        localStorage.setItem("role_id", response.data.role_id);
         
         // Перенаправляем на панель управления
         this.router.push("/dashboard");

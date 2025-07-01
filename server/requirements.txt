@@ -83,6 +83,9 @@ monotonic==1.6
 mpmath==1.3.0
 multidict==6.1.0
 mypy-extensions==1.0.0
+mysql==0.0.3
+mysql-connector-python==9.3.0
+mysqlclient==2.2.7
 narwhals==1.26.0
 nest-asyncio==1.6.0
 nltk==3.9.1
@@ -107,6 +110,7 @@ orjson==3.10.15
 overrides==7.7.0
 packaging==24.2
 pandas==2.2.3
+passlib==1.7.4
 pdfkit==1.0.0
 pillow==10.4.0
 posthog==3.13.0

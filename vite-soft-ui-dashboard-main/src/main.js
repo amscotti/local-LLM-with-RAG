@@ -17,7 +17,27 @@ import store from "./store";
 import router from "./router";
 import "./assets/css/nucleo-icons.css";
 import "./assets/css/nucleo-svg.css";
+import "./assets/css/custom.css";
 import SoftUIDashboard from "./soft-ui-dashboard";
+import axios from 'axios';
+import axiosInstance from './utils/axiosConfig';
+import { setupGlobalErrorHandlers } from './utils/errorLogger';
+import { clearExpiredCache } from './utils/localStorageCache';
+
+// Устанавливаем глобальный экземпляр Axios
+window.axios = axiosInstance;
+
+// Заменяем стандартный axios на настроенный экземпляр
+// для использования в компонентах, которые импортируют axios напрямую
+axios.defaults.baseURL = axiosInstance.defaults.baseURL;
+axios.interceptors.request = axiosInstance.interceptors.request;
+axios.interceptors.response = axiosInstance.interceptors.response;
+
+// Устанавливаем глобальные обработчики ошибок
+setupGlobalErrorHandlers();
+
+// Очищаем просроченные элементы кэша
+clearExpiredCache();
 
 createApp(App)
     .use(store)

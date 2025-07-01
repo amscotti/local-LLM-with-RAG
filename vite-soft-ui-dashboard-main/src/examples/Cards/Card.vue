@@ -1,4 +1,3 @@
-
 <template>
   <div class="m-1 card">
     <div class="p-3 card-body">
@@ -93,7 +92,7 @@ export default {
   methods: {
     async fetchContent() {
       try {
-        const response = await axios.get(`http://192.168.81.149:8000/user/${this.userId}/content`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/user/${this.userId}/content`);
         console.log('Response data:', response.data);
         
         // Проверяем, является ли response.data массивом
@@ -130,7 +129,7 @@ export default {
     },
     // http://192.168.81.149:8000 
     getDownloadLink(contentId) {
-      return `http://192.168.81.149:8000/download-file/${contentId}`;
+      return `${import.meta.env.VITE_API_URL}/download-file/${contentId}`;
     }
   }
 };

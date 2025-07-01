@@ -2,9 +2,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
+import os
 
 # Настройки подключения к базе данных
-DATABASE_URL = "mysql+mysqlconnector://root:123123@localhost:3306/db"
+DATABASE_URL = os.environ.get("DATABASE_URL", "mysql+mysqlconnector://root:123123@localhost:3306/db_test")
 
 # Создание движка базы данных
 engine = create_engine(DATABASE_URL)

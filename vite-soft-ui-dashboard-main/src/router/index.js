@@ -7,7 +7,11 @@ import Profile from "@/views/Profile.vue";
 import Rtl from "@/views/Rtl.vue";
 import SignIn from "@/views/SignIn.vue";
 import SignUp from "@/views/SignUp.vue";
+import QuizPage from "@/views/QuizPage.vue";
+import LibraryPage from "@/views/LibraryPage.vue";
+import TagContentPage from "@/views/TagContentPage.vue";
 import store from "@/store";
+import Feedback from "@/views/Feedback.vue";
 
 const routes = [
   {
@@ -63,6 +67,29 @@ const routes = [
     component: SignUp,
     meta: { guest: true }
   },
+  {
+    path: "/quizzes",
+    name: "Quizzes",
+    component: QuizPage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: "/library",
+    name: "Library",
+    component: LibraryPage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: "/tag/:tagId/:tagName",
+    name: "TagContent",
+    component: TagContentPage,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: "/feedback",
+    name: "Feedback",
+    component: Feedback,
+  },
 ];
 
 const router = createRouter({
@@ -73,20 +100,19 @@ const router = createRouter({
 
 // Защита маршрутов
 router.beforeEach((to, from, next) => {
-  // Проверяем, требует ли маршрут аутентификации
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   const isGuest = to.matched.some(record => record.meta.guest);
   const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const userRole = parseInt(localStorage.getItem('role_id'));
 
-  // Проверяем состояние аутентификации
   if (requiresAuth && !isAuthenticated) {
-    // Перенаправляем на страницу входа, если пользователь не аутентифицирован
     next('/sign-in');
+  } else if (to.path === '/tables' && userRole !== 1) {
+    // Только пользователи с role_id = 1 (админы) имеют доступ к админской панели
+    next('/dashboard');
   } else if (isGuest && isAuthenticated) {
-    // Перенаправляем на дашборд, если пользователь уже аутентифицирован
     next('/dashboard');
   } else {
-    // Продолжаем переход по маршруту
     next();
   }
 });

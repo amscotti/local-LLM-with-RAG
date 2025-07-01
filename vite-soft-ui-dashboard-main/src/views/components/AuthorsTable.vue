@@ -19,9 +19,12 @@
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
                 Пользователь
               </th>
-              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
-                Роль
+              <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">
+                ФИО
               </th>
+              <!-- <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
+                Роль
+              </th> -->
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">
                 Отдел
               </th>
@@ -41,8 +44,11 @@
                 </div>
               </td>
               <td>
-                <p class="text-xs font-weight-bold mb-0">{{ user.role_name }}</p>
+                <p class="text-xs font-weight-bold mb-0">{{ user.full_name }}</p>
               </td>
+              <!-- <td>
+                <p class="text-xs font-weight-bold mb-0">{{ user.role_name }}</p>
+              </td> -->
               <td>
                 <p class="text-xs font-weight-bold mb-0">{{ user.department_name }}</p>
               </td>
@@ -50,13 +56,13 @@
                 <p class="text-xs font-weight-bold mb-0">{{ user.access_name }}</p>
               </td>
               <td class="align-middle">
-                <button @click="openEditModal(user)" class="btn btn-link text-secondary mb-0">
+                <button @click="openEditModal(user)" class="btn btn-link text-secondary mb-0" title="Редактировать пользователя">
                   <i class="fa fa-edit text-xs"></i>
                 </button>
-                <button @click="openPasswordModal(user)" class="btn btn-link text-secondary mb-0">
+                <button @click="openPasswordModal(user)" class="btn btn-link text-secondary mb-0" title="Сменить пароль пользователя">
                   <i class="fa fa-key text-xs"></i>
                 </button>
-                <button @click="confirmDeleteUser(user)" class="btn btn-link text-danger mb-0">
+                <button @click="confirmDeleteUser(user)" class="btn btn-link text-danger mb-0" title="Удалить пользователя">
                   <i class="fa fa-trash text-xs"></i>
                 </button>
               </td>
@@ -92,14 +98,14 @@
             <label for="accessLevelSelect">Уровень доступа</label>
             <select class="form-control" id="accessLevelSelect" v-model="editingUser.access_id">
               <option v-for="access in accessLevels" :key="access.id" :value="access.id">
-                {{ access.name }}
+                {{ access.access_name }}
               </option>
             </select>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary" @click="updateUser">Сохранить</button>
+          <button type="button" class="btn btn-info" @click="updateUser">Сохранить</button>
         </div>
       </div>
     </div>
@@ -128,7 +134,7 @@
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-          <button type="button" class="btn btn-primary" @click="updatePassword">Сохранить</button>
+          <button type="button" class="btn btn-info" @click="updatePassword">Сохранить</button>
         </div>
       </div>
     </div>
@@ -202,7 +208,7 @@ export default {
   methods: {
     async fetchUsers() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/users');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/user/users`);
         this.users = response.data;
       } catch (error) {
         console.error('Ошибка при получении пользователей:', error);
@@ -210,7 +216,7 @@ export default {
     },
     async fetchDepartments() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/departments');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/departments`);
         this.departments = response.data;
       } catch (error) {
         console.error('Ошибка при получении отделов:', error);
@@ -218,7 +224,7 @@ export default {
     },
     async fetchAccessLevels() {
       try {
-        const response = await axios.get('http://192.168.81.149:8000/access-levels');
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/access-levels`);
         this.accessLevels = response.data;
       } catch (error) {
         console.error('Ошибка при получении уровней доступа:', error);
@@ -252,7 +258,7 @@ export default {
     },
     async updateUser() {
       try {
-        await axios.put(`http://192.168.81.149:8000/user/${this.editingUser.id}`, {
+        await axios.put(`${import.meta.env.VITE_API_URL}/user/user/${this.editingUser.id}`, {
           department_id: this.editingUser.department_id,
           access_id: this.editingUser.access_id
         });
@@ -277,7 +283,7 @@ export default {
       }
       
       try {
-        await axios.put(`http://192.168.81.149:8000/user/${this.editingUser.id}/password`, {
+        await axios.put(`${import.meta.env.VITE_API_URL}/user/user/${this.editingUser.id}/password`, {
           password: this.newPassword
         });
         
@@ -289,7 +295,7 @@ export default {
     },
     async deleteUser() {
       try {
-        await axios.delete(`http://192.168.81.149:8000/user/${this.deletingUser.id}`);
+        await axios.delete(`${import.meta.env.VITE_API_URL}/user/user/${this.deletingUser.id}`);
         this.deleteModal.hide();
         await this.fetchUsers();
       } catch (error) {

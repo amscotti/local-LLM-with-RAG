@@ -61,7 +61,8 @@
                       :disabled="isLoading"
                     >
                     <button 
-                      class="btn bg-gradient-primary mb-0" 
+                      class="btn btn-info mb-0" 
+                      style="background-color: #173376; border-color: #7b7b7b; color: #fff;"
                       @click="sendMessage"
                       :disabled="isLoading || !userMessage.trim()"
                     >
@@ -100,6 +101,25 @@ export default {
     async sendMessage() {
       if (!this.userMessage.trim()) return;
       
+      const userId = localStorage.getItem("userId");
+      const departmentId = localStorage.getItem("departmentId");
+      const isAuthenticated = localStorage.getItem("isAuthenticated");
+      
+      if (!isAuthenticated || isAuthenticated !== "true") {
+        console.error("Пользователь не аутентифицирован.");
+        return; // Прекращаем выполнение, если пользователь не аутентифицирован
+      }
+      
+      if (!departmentId) {
+        console.error("department_id не найден. Убедитесь, что пользователь вошел в систему.");
+        return; // Прекращаем выполнение, если departmentId отсутствует
+      }
+      
+      console.log("Отправляемые данные:", {
+        question: this.userMessage,
+        department_id: departmentId
+      });
+      
       // Добавляем сообщение пользователя в чат
       this.chatMessages.push({
         role: 'user',
@@ -115,8 +135,9 @@ export default {
         
         if (this.chatMode === "rag") {
           // Используем эндпоинт /query для режима с RAG
-          response = await axios.post("http://192.168.81.149:8000/query", {
-            question: message
+          response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/query`, { 
+            question: message,
+            department_id: departmentId // Добавляем department_id в запрос
           });
           
           // Добавляем ответ в чат
@@ -126,8 +147,9 @@ export default {
           });
         } else {
           // Используем эндпоинт /generate для простого чата
-          response = await axios.post("http://192.168.81.149:8000/generate", {
-            messages: message
+          response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/generate`, {
+            messages: message,
+            department_id: departmentId // Добавляем department_id в запрос
           });
           
           // Добавляем ответ в чат
@@ -162,6 +184,12 @@ export default {
       role: 'assistant',
       content: 'Здравствуйте! Я ваш ИИ-ассистент. Как я могу вам помочь сегодня?'
     });
+  },
+  created() {
+    const isAuthenticated = localStorage.getItem("isAuthenticated");
+    if (!isAuthenticated || isAuthenticated !== "true") {
+      this.$router.push("/sign-in"); // Перенаправляем на страницу входа
+    }
   }
 };
 </script>

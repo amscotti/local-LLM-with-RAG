@@ -12,7 +12,7 @@
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Описание</th>
               <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Отдел</th>
               <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Уровень доступа</th>
-              <th class="text-secondary opacity-7"></th>
+              <th class="text-secondary opacity-7">Действия</th>
             </tr>
           </thead>
           <tbody>
@@ -21,6 +21,7 @@
                 <div class="d-flex px-2 py-1">
                   <div class="d-flex flex-column justify-content-center">
                     <h6 class="mb-0 text-sm">{{ content.title }}</h6>
+                    <p class="text-xs text-secondary mb-0">{{ content.file_path }}</p>
                   </div>
                 </div>
               </td>
@@ -34,12 +35,21 @@
                 <span class="text-secondary text-xs font-weight-bold">{{ content.access_name }}</span>
               </td>
               <td class="align-middle text-center">
-                <a
-                  :href="getDownloadLink(content.id)"
-                  class="text-secondary font-weight-bold text-xs"
-                  data-toggle="tooltip"
-                  data-original-title="Скачать файл"
-                >Скачать</a>
+                <div class="d-flex justify-content-center">
+                  <a
+                    :href="getDownloadLink(content.id)"
+                    class="text-secondary font-weight-bold text-xs me-3"
+                    data-toggle="tooltip"
+                    data-original-title="Скачать файл"
+                  >Скачать</a>
+                  <a
+                    href="#"
+                    class="text-danger font-weight-bold text-xs"
+                    data-toggle="tooltip"
+                    data-original-title="Удалить контент"
+                    @click.prevent="deleteContent(content.id)"
+                  >Удалить</a>
+                </div>
               </td>
             </tr>
             <tr v-if="contents.length === 0">
@@ -77,11 +87,11 @@ export default {
         }
         
         // Получаем данные о пользователе
-        const userResponse = await axios.get(`http://192.168.81.149:8000/user/${userId}`);
+        const userResponse = await axios.get(`${import.meta.env.VITE_API_URL}/user/user/${userId}`);
         const user = userResponse.data;
         
         // Получаем контент для пользователя
-        const response = await axios.get(`http://192.168.81.149:8000/user/${userId}/content`);
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/user/user/${userId}/content`);
         this.contents = response.data;
       } catch (error) {
         this.contents = [];
@@ -90,7 +100,20 @@ export default {
     
     // Получение ссылки для скачивания файла
     getDownloadLink(contentId) {
-      return `192.168.81.149/download-file/${contentId}`;
+      return `${import.meta.env.VITE_API_URL}/content/download-file/${contentId}`;
+    },
+    
+    // Удаление контента
+    async deleteContent(contentId) {
+      if (confirm('Вы уверены, что хотите удалить этот контент?')) {
+        try {
+          await axios.delete(`${import.meta.env.VITE_API_URL}/content/content/${contentId}`);
+          this.fetchAllContent(); // Обновляем список контента
+        } catch (error) {
+          console.error('Ошибка при удалении контента:', error);
+          alert('Произошла ошибка при удалении контента');
+        }
+      }
     }
   }
 };

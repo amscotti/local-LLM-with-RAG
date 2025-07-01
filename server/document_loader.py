@@ -12,20 +12,31 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 PERSIST_DIRECTORY = "storage"
 TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324)
+# Получение URL для Ollama из переменной окружения или использование значения по умолчанию
+OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 def vec_search(embedding_model, query, db, n_top_cos: int = 5):
-    print(f"Searching for query: {query}")
+    """
+    Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
+    
+    Args:
+        embedding_model: Модель для создания эмбеддингов
+        query (str): Текст запроса
+        db: Векторная база данных
+        n_top_cos (int): Количество результатов для возврата
+        
+    Returns:
+        tuple: Кортеж из двух списков - топ-фрагменты и топ-файлы
+    """
+    # Кодируем запрос в вектор
     query_emb = embedding_model.embed_documents([query])[0]
-    print(f"Query embedding: {query_emb}")
 
+    # Поиск в базе данных
     search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
-    print(f"Search results: {search_result}")
 
-    top_chunks = [x.metadata.get('chunk') for x in search_result]
-    top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
-
-    print(f"Top chunks: {top_chunks}")
-    print(f"Top files: {top_files}")
+    # Извлечение фрагментов и файлов из метаданных
+    top_chunks = [x.page_content for x in search_result]
+    top_files = list({x.metadata.get('source') for x in search_result if x.metadata.get('source')})
 
     return top_chunks, top_files
 
@@ -50,7 +61,7 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     if os.path.exists(department_directory) and not reload:
         print(f"Загрузка существующей базы данных Chroma для отдела {department_id}...")
         db = Chroma(
-            embedding_function=OllamaEmbeddings(model=model_name),
+            embedding_function=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
             persist_directory=department_directory
         )
         return db
@@ -64,7 +75,7 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     if os.path.exists(department_directory):
         try:
             db = Chroma(
-                embedding_function=OllamaEmbeddings(model=model_name),
+                embedding_function=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
                 persist_directory=department_directory
             )
             # Получаем список файлов, которые уже есть в базе
@@ -96,13 +107,13 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
         # Возвращаем существующую базу данных
         if os.path.exists(department_directory):
             return Chroma(
-                embedding_function=OllamaEmbeddings(model=model_name),
+                embedding_function=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
                 persist_directory=department_directory
             )
         # Если директории нет, но и новых документов нет - создаем пустую базу
         return Chroma.from_documents(
             documents=[],
-            embedding=OllamaEmbeddings(model=model_name),
+            embedding=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
             persist_directory=department_directory
         )
     
@@ -116,7 +127,7 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     # Если директория существует, добавляем к существующей базе
     if os.path.exists(department_directory):
         db = Chroma(
-            embedding_function=OllamaEmbeddings(model=model_name),
+            embedding_function=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
             persist_directory=department_directory
         )
         db.add_documents(documents)
@@ -125,7 +136,7 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
         # Иначе создаем новую базу
         return Chroma.from_documents(
             documents=documents,
-            embedding=OllamaEmbeddings(model=model_name),
+            embedding=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
             persist_directory=department_directory
         )
 
