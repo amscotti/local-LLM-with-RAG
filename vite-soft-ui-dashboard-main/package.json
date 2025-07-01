@@ -17,6 +17,7 @@
     "chart.js": "3.6.0",
     "jkanban": "^1.3.1",
     "vue": "^3.2.25",
+    "vue-doc-preview": "^0.3.2",
     "vue-router": "^4.0.14",
     "vuex": "^4.0.2"
   },
