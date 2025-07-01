@@ -6,26 +6,62 @@ services:
     ports:
       - "3307:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: 123123
-      MYSQL_DATABASE: db
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-db}
     volumes:  
       - db_data:/var/lib/mysql
+      - ./backup_file2.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-123123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  app:
+  backend:
     build:
-      context: .
+      context: ./server
       dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "0.0.0.0:8000:8000"
+    environment:
+      - DATABASE_URL=mysql+mysqlconnector://root:${MYSQL_ROOT_PASSWORD:-123123}@db:3306/${MYSQL_DATABASE:-db}
+      - DEBUG=${DEBUG:-False}
     depends_on:
-      - db       
+      db:
+        condition: service_healthy
+    command: ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./vite-soft-ui-dashboard-main
+      dockerfile: Dockerfile
+    ports:
+      - "0.0.0.0:8080:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./vite-soft-ui-dashboard-main/nginx.conf:/etc/nginx/conf.d/default.conf
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-http://192.168.81.10:8080/api}
+    networks:
+      - app-network
 
   backup:
     image: mysql:8.0
     environment:
-      MYSQL_ROOT_PASSWORD: 123123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123123}
     volumes:
       - db_data:/var/lib/mysql
-    command: ["sh", "-c", "mysqldump -u root -p123123 db > /backup/backup_file.sql"]
-    volumes:
-      - ./backup:/backup  # Убедитесь, что у вас есть папка backup в корне проекта
+      - ./backup:/backup
+    depends_on:
+      - db
+    command: ["sh", "-c", "mysqldump -h db -u root -p${MYSQL_ROOT_PASSWORD:-123123} ${MYSQL_DATABASE:-db} > /backup/backup_file.sql"]
+
+volumes:
+  db_data:
+
+networks:
+  app-network:
+    driver: bridge
