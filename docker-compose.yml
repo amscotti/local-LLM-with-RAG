@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: 123123
+      MYSQL_DATABASE: db
+    volumes:  
+      - db_data:/var/lib/mysql
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db       
+
+  backup:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: 123123
+    volumes:
+      - db_data:/var/lib/mysql
+    command: ["sh", "-c", "mysqldump -u root -p123123 db > /backup/backup_file.sql"]
+    volumes:
+      - ./backup:/backup  # Убедитесь, что у вас есть папка backup в корне проекта
