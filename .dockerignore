@@ -1,0 +1,54 @@
+# Общие файлы и директории
+.git
+.github
+.gitignore
+.dockerignore
+.env
+.env.*
+*.md
+LICENSE
+*.log
+
+# Директории Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Директории Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Директории для тестирования
+tests/
+test/
+
+# Директории для документации
+docs/
+
+# Директории для данных
+data/
+backup/
+
+# Другие файлы
+*.swp
+.DS_Store
+Thumbs.db 
