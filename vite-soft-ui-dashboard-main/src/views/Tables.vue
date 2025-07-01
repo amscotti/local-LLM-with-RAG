@@ -1004,10 +1004,7 @@ export default {
       this.quizzes = [];
       
       try {
-        const currentUser = JSON.parse(localStorage.getItem('user')) || {};
-        const userId = currentUser.id || 1;
-        
-        let params = { user_id: userId };
+        let params = {};
         if (this.quizFilter.type !== 'all') {
           params.is_test = this.quizFilter.type === 'test';
         }
@@ -1015,9 +1012,11 @@ export default {
           params.department_id = this.quizFilter.department;
         }
         
-        const response = await axios.get('${import.meta.env.VITE_API_URL}/quiz/list', { params });
+        // Используем новый эндпоинт для администраторов
+        const response = await axios.get(`${import.meta.env.VITE_API_URL}/quiz/admin/list`, { params });
         this.quizzes = response.data;
       } catch (error) {
+        console.error('Ошибка при получении списка тестов/анкет:', error);
         this.quizzesError = error.response?.data?.detail || 'Ошибка при получении списка тестов/анкет';
       } finally {
         this.loadingQuizzes = false;

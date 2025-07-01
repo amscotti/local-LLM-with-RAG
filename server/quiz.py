@@ -550,7 +550,7 @@ def get_quiz_statistics(quiz_id: int, db: Session = Depends(get_db)):
     }
 
 @router.delete("/{quiz_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_quiz(quiz_id: int, db: Session = Depends(get_db)):
+def delete_quiz(quiz_id: int, user_id: Optional[int] = None, db: Session = Depends(get_db)):
     """Удаление теста/анкеты"""
     # Получаем тест/анкету
     quiz = db.query(Quiz).filter(Quiz.id == quiz_id).first()
@@ -561,4 +561,45 @@ def delete_quiz(quiz_id: int, db: Session = Depends(get_db)):
     db.delete(quiz)
     db.commit()
     
-    return None 
+    return None
+
+@router.get("/admin/list", response_model=List[QuizListItem])
+def list_all_quizzes(
+    is_test: Optional[bool] = None,
+    department_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    db: Session = Depends(get_db)
+):
+    """Получение списка всех тестов и анкет для администратора без учета прав доступа"""
+    # Базовый запрос
+    query = db.query(
+        Quiz,
+        func.count(Question.id).label("question_count")
+    ).outerjoin(Question, Quiz.id == Question.quiz_id).group_by(Quiz.id)
+    
+    # Фильтр по типу (тест или анкета)
+    if is_test is not None:
+        query = query.filter(Quiz.is_test == is_test)
+    
+    # Фильтр по отделу
+    if department_id is not None:
+        query = query.filter(Quiz.department_id == department_id)
+    
+    # Получаем результаты
+    results = query.all()
+    
+    # Формируем ответ
+    quizzes = []
+    for quiz, question_count in results:
+        quizzes.append(QuizListItem(
+            id=quiz.id,
+            title=quiz.title,
+            description=quiz.description,
+            is_test=quiz.is_test,
+            department_id=quiz.department_id,
+            access_level=quiz.access_level,
+            created_at=quiz.created_at,
+            question_count=question_count
+        ))
+    
+    return quizzes 
