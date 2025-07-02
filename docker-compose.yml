@@ -34,7 +34,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--limit-concurrency", "100", "--backlog", "2048"]
+    command: ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "25", "--limit-concurrency", "100", "--backlog", "2048"]
     networks:
       - app-network
 
@@ -78,14 +78,12 @@ services:
     networks:
       - app-network
 
-  # ollama:
-  #   image: ollama/ollama:latest
-  #   ports:
-  #     - "11434:11434"  # Порт, на котором будет доступен Ollama
-  #   environment:
-  #     - OLLAMA_HOST=http://0.0.0.0:11434
-  #   networks:
-  #     - app-network
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    networks:
+      - app-network
 
 volumes:
   db_data:

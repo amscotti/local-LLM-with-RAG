@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Form
 import os
 from sqlalchemy.orm import Session
 from database import get_db
 from models_db import Access, Content, User, Tag
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
+from typing import List
 
 
 router = APIRouter(prefix="/content", tags=["content"])
@@ -73,6 +74,48 @@ async def upload_content(
     db.refresh(new_content)
 
     return {"message": "Контент успешно загружен"}
+
+@router.post("/upload-files")
+async def upload_files(
+    files: List[UploadFile] = File(...),
+    directory_path: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    # Создаем директорию, если она не существует
+    os.makedirs(directory_path, exist_ok=True);
+    
+    # Список для хранения информации о загруженных файлах
+    uploaded_files_info = [];
+
+    for file in files:
+        # Сохранение файла на сервере в указанной директории
+        file_location = f"{directory_path}/{file.filename}";
+        
+        try:
+            with open(file_location, "wb") as f:
+                f.write(await file.read());
+            
+            # Добавление информации о файле в базу данных
+            new_content = Content(
+                title=file.filename,
+                description="Загруженный файл",
+                file_path=file_location,
+                access_level=1,  # Уровень доступа по умолчанию, можно изменить
+                department_id=1,  # ID отдела по умолчанию, можно изменить
+                tag_id=None  # Можно добавить тег, если нужно
+            );
+            db.add(new_content);
+            db.commit();
+            db.refresh(new_content);
+
+            uploaded_files_info.append({
+                "filename": file.filename,
+                "file_path": file_location
+            });
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Ошибка при сохранении файла {file.filename}: {str(e)}");
+
+    return {"message": "Файлы успешно загружены", "files": uploaded_files_info};
 
 # Модель для обновления контента
 class ContentUpdate(BaseModel):

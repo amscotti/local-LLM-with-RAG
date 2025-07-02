@@ -79,7 +79,7 @@
               <div class="col-md-6 mb-3">
                 <label for="edit-department" class="form-label">Отдел</label>
                 <select class="form-select" id="edit-department" v-model="editForm.department_id" required>
-                  <option v-for="department in departments" :key="department.id" :value="department.id">
+                  <option v-for="department in departments" :key="department.id" :value="department.department_name">
                     {{ department.department_name }}
                   </option>
                 </select>
