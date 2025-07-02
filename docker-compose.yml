@@ -1,9 +1,11 @@
+# ВЕРСИЯ 0.0.1
 version: '3.8'
 
 services:
   db:
     image: mysql:8.0
     ports:
+    # подключение к `docker` в workbench
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123123}
@@ -28,6 +30,7 @@ services:
     environment:
       - DATABASE_URL=mysql+mysqlconnector://root:${MYSQL_ROOT_PASSWORD:-123123}@db:3306/${MYSQL_DATABASE:-db}
       - DEBUG=${DEBUG:-False}
+      - OLLAMA_HOST=http://ollama:11434
     depends_on:
       db:
         condition: service_healthy
@@ -74,6 +77,15 @@ services:
       - frontend
     networks:
       - app-network
+
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   ports:
+  #     - "11434:11434"  # Порт, на котором будет доступен Ollama
+  #   environment:
+  #     - OLLAMA_HOST=http://0.0.0.0:11434
+  #   networks:
+  #     - app-network
 
 volumes:
   db_data:

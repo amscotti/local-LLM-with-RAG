@@ -32,12 +32,27 @@ async def upload_content(
     directory_path: str,
     file: UploadFile = File(...),
     tag_id: int = None,
+    user_id: int = None,
     db: Session = Depends(get_db)
 ):
+    # Создаем директорию, если она не существует
+    os.makedirs(directory_path, exist_ok=True)
+    
+    # Заменяем обратные слэши на прямые для совместимости с Linux
+    directory_path = directory_path.replace('\\', '/')
+    
     # Сохранение файла на сервере в указанной директории
     file_location = f"{directory_path}/{file.filename}"  # Используем указанный путь
-    with open(file_location, "wb") as f:
-        f.write(await file.read())
+    
+    # with open(file_location, "wb") as f:
+    #     f.write(await file.read())
+
+
+    try:
+        with open(file_location, "wb") as f:
+            f.write(await file.read())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при сохранении файла: {str(e)}")
 
     # Проверка существования уровня доступа
     access = db.query(Access).filter(Access.id == access_id).first()
