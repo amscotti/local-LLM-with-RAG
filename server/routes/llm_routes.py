@@ -1,15 +1,13 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 import traceback
-import os
 
 from database import get_db
 from models_db import Department
 from document_loader import load_documents_into_database, vec_search
-from utils.rabbitmq_service import RabbitMQService
 
 # Глобальные переменные для хранения экземпляров чатов и баз данных для каждого отдела
 department_chats = {}  # {department_id: chat_instance}
@@ -37,9 +35,6 @@ class GenerateRequest(BaseModel):
 class GenerateResponse(BaseModel):
     text: str
     model: str = "ilyagusev/saiga_llama3:latest"
-
-# Создаем экземпляр сервиса RabbitMQ
-rabbitmq_service = RabbitMQService()
 
 # Функция для проверки доступности модели
 def check_if_model_is_available(model_name: str) -> bool:
@@ -86,23 +81,8 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
         return False
 
     try:
-        # Проверяем путь к документам и добавляем префикс /app/files/ если нужно
-        if not documents_path.startswith('/app/files/'):
-            full_documents_path = f"/app/files/{documents_path}"
-        else:
-            full_documents_path = documents_path
-            
-        # Проверяем существование директории и создаем её при необходимости
-        if not os.path.exists(full_documents_path):
-            try:
-                os.makedirs(full_documents_path, exist_ok=True)
-                print(f"Создана директория для документов: {full_documents_path}")
-            except Exception as e:
-                print(f"Ошибка при создании директории {full_documents_path}: {e}")
-                return False
-        
-        print(f"Загрузка документов в базу данных для отдела {department_id} из {full_documents_path}...")
-        department_db = load_documents_into_database(embedding_model_name, full_documents_path, department_id, reload=reload)
+        print(f"Загрузка документов в базу данных для отдела {department_id}...")
+        department_db = load_documents_into_database(embedding_model_name, documents_path, department_id, reload=reload)
         # Сохраняем базу данных для этого отдела
         department_dbs[department_id] = department_db
         # Инициализируем модель встраивания для векторного поиска
@@ -157,23 +137,40 @@ async def generate(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=error_message)
 
 @router.post("/query")
-async def query_endpoint(request: QueryRequest, background_tasks: BackgroundTasks, user_id: int = None):
-    try:
-        # Отправляем сообщение в очередь RabbitMQ для асинхронной обработки
-        message = {
-            "question": request.question,
-            "department_id": request.department_id,
-            "user_id": user_id
-        }
-        
-        # Отправляем сообщение в очередь
-        background_tasks.add_task(rabbitmq_service.publish_message, "llm_queries", message)
-        
-        # Возвращаем успешный ответ клиенту
-        return {"status": "processing", "message": "Ваш запрос принят и обрабатывается"}
+async def query(request: QueryRequest):
+    """
+    Выполняет запрос к LLM с использованием RAG.
+    """
+    department_id = request.department_id
     
+    if department_id not in department_chats:
+        raise HTTPException(status_code=500, detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /llm/initialize.")
+    
+    print(f"Получен запрос для отдела {department_id}: {request}")  # Отладочное сообщение
+    user_question = request.question
+    
+    # Выполняем векторный поиск фрагментов
+    top_chunks, top_files = vec_search(department_embedding_models[department_id], user_question, department_dbs[department_id], n_top_cos=5)
+    
+    try:
+        response = department_chats[department_id](user_question)
+        print(f"Ответ от LLM для отдела {department_id}: {response}")  # Отладочное сообщение
+        
+        if response is None:
+            print("Получен пустой ответ от LLM")
+            raise HTTPException(status_code=500, detail="Получен пустой ответ от LLM.")
+        
+        # Проверяем, начинается ли ответ с "Произошла ошибка"
+        if isinstance(response, str) and response.startswith("Произошла ошибка"):
+            print(f"LLM вернул сообщение об ошибке: {response}")
+            raise HTTPException(status_code=500, detail=response)
+        
+        return {"answer": response, "chunks": top_chunks, "files": top_files}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_message = f"Ошибка при обработке запроса: {str(e)}"
+        print(error_message)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=error_message)
 
 @router.post("/initialize")
 async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
@@ -199,8 +196,6 @@ async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
             
         return {"message": f"Модель для отдела {request.department_id} успешно инициализирована"}
     except Exception as e:
-        print(f"Ошибка при инициализации модели: {str(e)}")
-        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/models")
