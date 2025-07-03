@@ -112,6 +112,7 @@ packaging==24.2
 pandas==2.2.3
 passlib==1.7.4
 pdfkit==1.0.0
+pika==1.3.2
 pillow==10.4.0
 posthog==3.13.0
 propcache==0.2.1
