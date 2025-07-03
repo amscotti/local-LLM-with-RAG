@@ -188,6 +188,11 @@ export default {
       if (this.$refs.videoPlayer) {
         this.$refs.videoPlayer.pause();
       }
+      this.currentMediaUrl = "";
+      this.currentMediaTitle = "";
+      this.currentMediaType = "";
+      this.isAudioFile = false;
+      this.isVideoFile = false;
     });
   },
   methods: {
