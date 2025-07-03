@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
@@ -8,6 +8,7 @@ import traceback
 from database import get_db
 from models_db import Department
 from document_loader import load_documents_into_database, vec_search
+from utils.rabbitmq_service import RabbitMQService
 
 # Глобальные переменные для хранения экземпляров чатов и баз данных для каждого отдела
 department_chats = {}  # {department_id: chat_instance}
@@ -35,6 +36,9 @@ class GenerateRequest(BaseModel):
 class GenerateResponse(BaseModel):
     text: str
     model: str = "ilyagusev/saiga_llama3:latest"
+
+# Создаем экземпляр сервиса RabbitMQ
+rabbitmq_service = RabbitMQService()
 
 # Функция для проверки доступности модели
 def check_if_model_is_available(model_name: str) -> bool:
@@ -137,40 +141,23 @@ async def generate(request: GenerateRequest):
         raise HTTPException(status_code=500, detail=error_message)
 
 @router.post("/query")
-async def query(request: QueryRequest):
-    """
-    Выполняет запрос к LLM с использованием RAG.
-    """
-    department_id = request.department_id
-    
-    if department_id not in department_chats:
-        raise HTTPException(status_code=500, detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /llm/initialize.")
-    
-    print(f"Получен запрос для отдела {department_id}: {request}")  # Отладочное сообщение
-    user_question = request.question
-    
-    # Выполняем векторный поиск фрагментов
-    top_chunks, top_files = vec_search(department_embedding_models[department_id], user_question, department_dbs[department_id], n_top_cos=5)
-    
+async def query_endpoint(request: QueryRequest, background_tasks: BackgroundTasks, user_id: int = None):
     try:
-        response = department_chats[department_id](user_question)
-        print(f"Ответ от LLM для отдела {department_id}: {response}")  # Отладочное сообщение
+        # Отправляем сообщение в очередь RabbitMQ для асинхронной обработки
+        message = {
+            "question": request.question,
+            "department_id": request.department_id,
+            "user_id": user_id
+        }
         
-        if response is None:
-            print("Получен пустой ответ от LLM")
-            raise HTTPException(status_code=500, detail="Получен пустой ответ от LLM.")
+        # Отправляем сообщение в очередь
+        background_tasks.add_task(rabbitmq_service.publish_message, "llm_queries", message)
         
-        # Проверяем, начинается ли ответ с "Произошла ошибка"
-        if isinstance(response, str) and response.startswith("Произошла ошибка"):
-            print(f"LLM вернул сообщение об ошибке: {response}")
-            raise HTTPException(status_code=500, detail=response)
-        
-        return {"answer": response, "chunks": top_chunks, "files": top_files}
+        # Возвращаем успешный ответ клиенту
+        return {"status": "processing", "message": "Ваш запрос принят и обрабатывается"}
+    
     except Exception as e:
-        error_message = f"Ошибка при обработке запроса: {str(e)}"
-        print(error_message)
-        print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=error_message)
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/initialize")
 async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
