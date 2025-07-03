@@ -14,11 +14,11 @@ router = APIRouter(prefix="/content", tags=["content"])
 @router.post("/upload-file")
 async def upload_file(file: UploadFile = File(...)):
     # Проверка на уникальность имени файла
-    if file.filename in os.listdir("Research"):  # Предполагается, что "Research" - это папка для хранения файлов
+    if os.path.exists(f"/app/files/{file.filename}"):
         return {"message": "Файл с таким именем уже существует."}
 
-    # Сохранение файла
-    file_location = f"Research/{file.filename}"
+    # Сохранение файла в директорию /app/files/
+    file_location = f"/app/files/{file.filename}"
     with open(file_location, "wb") as f:
         f.write(await file.read())
 
@@ -30,25 +30,17 @@ async def upload_content(
     description: str,
     access_id: int,
     department_id: int,
-    directory_path: str,
     file: UploadFile = File(...),
     tag_id: int = None,
     user_id: int = None,
     db: Session = Depends(get_db)
 ):
-    # Создаем директорию, если она не существует
-    os.makedirs(directory_path, exist_ok=True)
+    # Создаем директорию /app/files/, если она не существует
+    os.makedirs("/app/files/", exist_ok=True)
     
-    # Заменяем обратные слэши на прямые для совместимости с Linux
-    directory_path = directory_path.replace('\\', '/')
+    # Сохранение файла на сервере в директории /app/files/
+    file_location = f"/app/files/{file.filename}"
     
-    # Сохранение файла на сервере в указанной директории
-    file_location = f"{directory_path}/{file.filename}"  # Используем указанный путь
-    
-    # with open(file_location, "wb") as f:
-    #     f.write(await file.read())
-
-
     try:
         with open(file_location, "wb") as f:
             f.write(await file.read())
@@ -78,18 +70,17 @@ async def upload_content(
 @router.post("/upload-files")
 async def upload_files(
     files: List[UploadFile] = File(...),
-    directory_path: str = Form(...),
     db: Session = Depends(get_db)
 ):
-    # Создаем директорию, если она не существует
-    os.makedirs(directory_path, exist_ok=True);
+    # Создаем директорию /app/files/, если она не существует
+    os.makedirs("/app/files/", exist_ok=True);
     
     # Список для хранения информации о загруженных файлах
     uploaded_files_info = [];
 
     for file in files:
-        # Сохранение файла на сервере в указанной директории
-        file_location = f"{directory_path}/{file.filename}";
+        # Сохранение файла на сервере в директории /app/files/
+        file_location = f"/app/files/{file.filename}";
         
         try:
             with open(file_location, "wb") as f:
@@ -281,7 +272,16 @@ async def download_file(content_id: int, db: Session = Depends(get_db)):
     # Проверяем, существует ли файл
     file_path = content.file_path
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Файл не найден")
+        # Если файл не найден по абсолютному пути, проверяем, может быть это старый путь
+        # и нужно добавить префикс /app/files/
+        if not file_path.startswith('/app/files/'):
+            new_path = f"/app/files/{os.path.basename(file_path)}"
+            if os.path.exists(new_path):
+                file_path = new_path
+            else:
+                raise HTTPException(status_code=404, detail="Файл не найден")
+        else:
+            raise HTTPException(status_code=404, detail="Файл не найден")
 
     # Возвращаем файл как ответ
     return FileResponse(file_path, media_type='application/octet-stream', filename=os.path.basename(file_path))
@@ -296,7 +296,16 @@ async def view_file(content_id: int, db: Session = Depends(get_db)):
     # Проверяем, существует ли файл
     file_path = content.file_path
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Файл не найден")
+        # Если файл не найден по абсолютному пути, проверяем, может быть это старый путь
+        # и нужно добавить префикс /app/files/
+        if not file_path.startswith('/app/files/'):
+            new_path = f"/app/files/{os.path.basename(file_path)}"
+            if os.path.exists(new_path):
+                file_path = new_path
+            else:
+                raise HTTPException(status_code=404, detail="Файл не найден")
+        else:
+            raise HTTPException(status_code=404, detail="Файл не найден")
 
     # Определяем тип файла на основе расширения
     file_extension = os.path.splitext(file_path)[1].lower()

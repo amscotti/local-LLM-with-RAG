@@ -10,7 +10,8 @@ from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-PERSIST_DIRECTORY = "storage"
+# Изменяем директорию для хранения данных на /app/files/storage
+PERSIST_DIRECTORY = "/app/files/storage"
 TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324)
 # Получение URL для Ollama из переменной окружения или использование значения по умолчанию
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
@@ -68,6 +69,11 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     
     # Если нужно перезагрузить документы или директория не существует
     print(f"Загрузка документов для отдела {department_id}...")
+    
+    # Если documents_path не начинается с /app/files/, добавляем этот префикс
+    if not documents_path.startswith('/app/files/'):
+        documents_path = f"/app/files/{documents_path}"
+    
     raw_documents = load_documents(documents_path)
     
     # Если директория для хранения существует, получаем список уже загруженных файлов

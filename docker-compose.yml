@@ -37,6 +37,8 @@ services:
     command: ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "25", "--limit-concurrency", "100", "--backlog", "2048"]
     networks:
       - app-network
+    volumes:
+      - files_storage:/app/files
 
   frontend:
     build:
@@ -101,7 +103,11 @@ services:
 volumes:
   db_data:
   rabbitmq_data:
+  files_storage:
 
 networks:
   app-network:
     driver: bridge
+
+
+  
