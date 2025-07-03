@@ -1,7 +1,8 @@
 <template>
   <div class="card mb-4">
-    <div class="card-header pb-0">
-      <h6>Таблица контента</h6>
+    <div class="card-header pb-0 d-flex justify-content-between align-items-center">
+      <h6>Таблица контента {{ isAdmin ? '(Режим администратора)' : '' }}</h6>
+      <span v-if="isAdmin" class="badge bg-gradient-success">Администратор</span>
     </div>
     <div class="card-body px-0 pt-0 pb-2">
       <div class="table-responsive p-0">
@@ -12,6 +13,7 @@
               <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Описание</th>
               <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Отдел</th>
               <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Уровень доступа</th>
+              <th v-if="isAdmin" class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Доступность</th>
               <th class="text-secondary opacity-7">Действия</th>
             </tr>
           </thead>
@@ -29,10 +31,20 @@
                 <p class="text-xs text-secondary mb-0">{{ content.description }}</p>
               </td>
               <td class="align-middle text-center text-sm">
-                <p class="text-xs font-weight-bold mb-0">{{ content.department_name }}</p>
+                <p class="text-xs font-weight-bold mb-0">{{ content.department_id }}</p>
               </td>
               <td class="align-middle text-center">
-                <span class="text-secondary text-xs font-weight-bold">{{ content.access_name }}</span>
+                <span class="text-secondary text-xs font-weight-bold">{{ content.access_level }}</span>
+              </td>
+              <td v-if="isAdmin" class="align-middle text-center">
+                <span 
+                  :class="[
+                    'badge', 
+                    content.access_level > 1 ? 'bg-gradient-warning' : 'bg-gradient-success'
+                  ]"
+                >
+                  {{ content.access_level > 1 ? 'Ограниченный' : 'Общедоступный' }}
+                </span>
               </td>
               <td class="align-middle text-center">
                 <div class="d-flex justify-content-center">
@@ -71,15 +83,17 @@ export default {
   name: "ContentTable",
   data() {
     return {
-      contents: []
+      contents: [],
+      isAdmin: false
     };
   },
   async created() {
+    await this.checkIfAdmin();
     await this.fetchAllContent();
   },
   methods: {
-    // Получение всего контента
-    async fetchAllContent() {
+    // Проверка, является ли пользователь администратором
+    async checkIfAdmin() {
       try {
         const userId = localStorage.getItem("userId");
         if (!userId) {
@@ -90,10 +104,33 @@ export default {
         const userResponse = await axios.get(`${import.meta.env.VITE_API_URL}/user/user/${userId}`);
         const user = userResponse.data;
         
-        // Получаем контент для пользователя
-        const response = await axios.get(`${import.meta.env.VITE_API_URL}/user/user/${userId}/content`);
-        this.contents = response.data;
+        // Проверяем, является ли пользователь администратором (access_id = 3)
+        this.isAdmin = user.access_id === 3;
       } catch (error) {
+        console.error('Ошибка при проверке прав администратора:', error);
+        this.isAdmin = false;
+      }
+    },
+    
+    // Получение всего контента
+    async fetchAllContent() {
+      try {
+        const userId = localStorage.getItem("userId");
+        if (!userId) {
+          return;
+        }
+        
+        if (this.isAdmin) {
+          // Если пользователь - администратор, получаем весь контент
+          const response = await axios.get(`${import.meta.env.VITE_API_URL}/content/all`);
+          this.contents = response.data;
+        } else {
+          // Для обычных пользователей получаем только доступный им контент
+          const response = await axios.get(`${import.meta.env.VITE_API_URL}/content/all`);
+          this.contents = response.data;
+        }
+      } catch (error) {
+        console.error('Ошибка при загрузке контента:', error);
         this.contents = [];
       }
     },
