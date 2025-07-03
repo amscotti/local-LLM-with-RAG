@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 import traceback
+import os
 
 from database import get_db
 from models_db import Department
@@ -85,8 +86,23 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
         return False
 
     try:
-        print(f"Загрузка документов в базу данных для отдела {department_id}...")
-        department_db = load_documents_into_database(embedding_model_name, documents_path, department_id, reload=reload)
+        # Проверяем путь к документам и добавляем префикс /app/files/ если нужно
+        if not documents_path.startswith('/app/files/'):
+            full_documents_path = f"/app/files/{documents_path}"
+        else:
+            full_documents_path = documents_path
+            
+        # Проверяем существование директории и создаем её при необходимости
+        if not os.path.exists(full_documents_path):
+            try:
+                os.makedirs(full_documents_path, exist_ok=True)
+                print(f"Создана директория для документов: {full_documents_path}")
+            except Exception as e:
+                print(f"Ошибка при создании директории {full_documents_path}: {e}")
+                return False
+        
+        print(f"Загрузка документов в базу данных для отдела {department_id} из {full_documents_path}...")
+        department_db = load_documents_into_database(embedding_model_name, full_documents_path, department_id, reload=reload)
         # Сохраняем базу данных для этого отдела
         department_dbs[department_id] = department_db
         # Инициализируем модель встраивания для векторного поиска
@@ -183,6 +199,8 @@ async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
             
         return {"message": f"Модель для отдела {request.department_id} успешно инициализирована"}
     except Exception as e:
+        print(f"Ошибка при инициализации модели: {str(e)}")
+        print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/models")

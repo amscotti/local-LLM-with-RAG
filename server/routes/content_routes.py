@@ -10,46 +10,46 @@ from typing import List
 
 router = APIRouter(prefix="/content", tags=["content"])
 
-# Эндпоинт для загрузки файлов
-@router.post("/upload-file")
-async def upload_file(
-    file: UploadFile = File(...),
-    directory: str = ""  # Добавляем параметр для указания поддиректории
-):
-    # Создаем базовую директорию /app/files/, если она не существует
-    os.makedirs("/app/files/", exist_ok=True)
+# # Эндпоинт для загрузки файлов
+# @router.post("/upload-file")
+# async def upload_file(
+#     file: UploadFile = File(...),
+#     directory: str = ""  # Добавляем параметр для указания поддиректории
+# ):
+#     # Создаем базовую директорию /app/files/, если она не существует
+#     os.makedirs("/app/files/", exist_ok=True)
     
-    # Формируем путь к директории для сохранения файла
-    if directory:
-        # Убираем начальный и конечный слеши, если они есть
-        directory = directory.strip('/')
+#     # Формируем путь к директории для сохранения файла
+#     if directory:
+#         # Убираем начальный и конечный слеши, если они есть
+#         directory = directory.strip('/')
         
-        # Проверяем, начинается ли путь с /app/files/
-        if directory.startswith('/app/files/'):
-            target_dir = directory
-        else:
-            target_dir = f"/app/files/{directory}"
+#         # Проверяем, начинается ли путь с /app/files/
+#         if directory.startswith('/app/files/'):
+#             target_dir = directory
+#         else:
+#             target_dir = f"/app/files/{directory}"
             
-        # Создаем директорию, если она не существует
-        os.makedirs(target_dir, exist_ok=True)
+#         # Создаем директорию, если она не существует
+#         os.makedirs(target_dir, exist_ok=True)
         
-        # Формируем полный путь к файлу
-        file_location = f"{target_dir}/{file.filename}"
-    else:
-        # Если директория не указана, сохраняем в корневую директорию /app/files/
-        file_location = f"/app/files/{file.filename}"
+#         # Формируем полный путь к файлу
+#         file_location = f"{target_dir}/{file.filename}"
+#     else:
+#         # Если директория не указана, сохраняем в корневую директорию /app/files/
+#         file_location = f"/app/files/{file.filename}"
     
-    # Проверка на уникальность имени файла
-    if os.path.exists(file_location):
-        return {"message": f"Файл с таким именем уже существует в {os.path.dirname(file_location)}."}
+#     # Проверка на уникальность имени файла
+#     if os.path.exists(file_location):
+#         return {"message": f"Файл с таким именем уже существует в {os.path.dirname(file_location)}."}
 
-    # Сохранение файла в указанную директорию
-    try:
-        with open(file_location, "wb") as f:
-            f.write(await file.read())
-        return {"message": f"Файл '{file.filename}' успешно загружен в {os.path.dirname(file_location)}."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ошибка при сохранении файла: {str(e)}")
+#     # Сохранение файла в указанную директорию
+#     try:
+#         with open(file_location, "wb") as f:
+#             f.write(await file.read())
+#         return {"message": f"Файл '{file.filename}' успешно загружен в {os.path.dirname(file_location)}."}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Ошибка при сохранении файла: {str(e)}")
 
 @router.post("/upload-content")
 async def upload_content(
