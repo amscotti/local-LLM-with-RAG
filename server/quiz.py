@@ -29,6 +29,7 @@ class QuestionResponse(BaseModel):
     text: str
     question_type: str
     options: Optional[List[Dict[str, Any]]] = None
+    correct_answer: Optional[Any] = None
     order: int
     
     class Config:
@@ -219,6 +220,7 @@ def create_quiz(quiz_data: QuizCreate, db: Session = Depends(get_db)):
                 text=q.text,
                 question_type=q.question_type,
                 options=q.options,
+                correct_answer=q.correct_answer,
                 order=q.order
             ) for q in questions
         ]
@@ -309,6 +311,7 @@ def get_quiz(quiz_id: int, user_id: int, db: Session = Depends(get_db)):
                 text=q.text,
                 question_type=q.question_type,
                 options=q.options,
+                correct_answer=q.correct_answer,
                 order=q.order
             ) for q in questions
         ]

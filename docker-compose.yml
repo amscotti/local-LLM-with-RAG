@@ -84,6 +84,15 @@ services:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ollama_data:/root/.ollama
     networks:
       - app-network
 
@@ -104,6 +113,7 @@ volumes:
   db_data:
   rabbitmq_data:
   files_storage:
+  ollama_data:
 
 networks:
   app-network:

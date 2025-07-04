@@ -30,18 +30,20 @@ class InitRequest(BaseModel):
 
 class GenerateRequest(BaseModel):
     messages: str
-    model: str = "ilyagusev/saiga_llama3:latest"
+    model: str = "gemma3"
 
 class GenerateResponse(BaseModel):
     text: str
-    model: str = "ilyagusev/saiga_llama3:latest"
+    model: str = "gemma3"
 
 # Функция для проверки доступности модели
 def check_if_model_is_available(model_name: str) -> bool:
     # Список доступных моделей, можно расширить по необходимости
     available_models = [
-        "ilyagusev/saiga_llama3:latest", 
-        "snowflake-arctic-embed2:latest", 
+        "gemma3", 
+        "nomic-embed-text",
+        "ilyagusev/saiga_llama3:latest",
+        "snowflake-arctic-embed2:latest",
     ]
     
     # Проверка доступности модели
@@ -54,11 +56,13 @@ def check_if_model_is_available(model_name: str) -> bool:
 def get_available_models() -> Dict[str, List[str]]:
     # Список моделей LLM
     llm_models = [
+        "gemma3",
         "ilyagusev/saiga_llama3:latest", 
     ]
     
     # Список моделей эмбеддингов
     embedding_models = [
+        "nomic-embed-text",
         "snowflake-arctic-embed2:latest", 
     ]
     
@@ -134,7 +138,11 @@ async def generate(request: GenerateRequest):
         error_message = f"Ошибка при обработке запроса на генерацию: {str(e)}"
         print(error_message)
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=error_message)
+        # Вместо ошибки 500 возвращаем ответ с сообщением об ошибке
+        return GenerateResponse(
+            text=f"Произошла ошибка при генерации ответа. Пожалуйста, попробуйте позже или переформулируйте вопрос. Детали: {str(e)}",
+            model=request.model
+        )
 
 @router.post("/query")
 async def query(request: QueryRequest):
@@ -144,13 +152,19 @@ async def query(request: QueryRequest):
     department_id = request.department_id
     
     if department_id not in department_chats:
-        raise HTTPException(status_code=500, detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /llm/initialize.")
+        raise HTTPException(status_code=400, detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /llm/initialize.")
     
     print(f"Получен запрос для отдела {department_id}: {request}")  # Отладочное сообщение
     user_question = request.question
     
-    # Выполняем векторный поиск фрагментов
-    top_chunks, top_files = vec_search(department_embedding_models[department_id], user_question, department_dbs[department_id], n_top_cos=5)
+    try:
+        # Выполняем векторный поиск фрагментов
+        top_chunks, top_files = vec_search(department_embedding_models[department_id], user_question, department_dbs[department_id], n_top_cos=5)
+    except Exception as e:
+        error_message = f"Ошибка при векторном поиске: {str(e)}"
+        print(error_message)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=400, detail=error_message)
     
     try:
         response = department_chats[department_id](user_question)
@@ -158,19 +172,21 @@ async def query(request: QueryRequest):
         
         if response is None:
             print("Получен пустой ответ от LLM")
-            raise HTTPException(status_code=500, detail="Получен пустой ответ от LLM.")
+            return {"answer": "Не удалось получить ответ от модели. Пожалуйста, попробуйте позже или переформулируйте вопрос.", "chunks": top_chunks, "files": top_files}
         
         # Проверяем, начинается ли ответ с "Произошла ошибка"
         if isinstance(response, str) and response.startswith("Произошла ошибка"):
             print(f"LLM вернул сообщение об ошибке: {response}")
-            raise HTTPException(status_code=500, detail=response)
+            # Возвращаем сообщение об ошибке как ответ, но с кодом 200
+            return {"answer": "Произошла ошибка при генерации ответа. Пожалуйста, попробуйте позже или переформулируйте вопрос.", "chunks": top_chunks, "files": top_files}
         
         return {"answer": response, "chunks": top_chunks, "files": top_files}
     except Exception as e:
         error_message = f"Ошибка при обработке запроса: {str(e)}"
         print(error_message)
         print(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=error_message)
+        # Возвращаем сообщение об ошибке как ответ, но с кодом 200
+        return {"answer": f"Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже или переформулируйте вопрос. Детали: {str(e)}", "chunks": top_chunks, "files": top_files}
 
 @router.post("/initialize")
 async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):

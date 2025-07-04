@@ -22,6 +22,11 @@ axiosInstance.interceptors.request.use(
     const requestId = `${config.method}-${config.url}-${Date.now()}`;
     config.requestId = requestId;
     
+    // Если установлен флаг noRetry, сохраняем его в конфигурации запроса
+    if (config.noRetry) {
+      config.noRetry = true;
+    }
+    
     // Получаем токен из localStorage
     const token = localStorage.getItem('token');
     if (token) {
@@ -82,7 +87,8 @@ axiosInstance.interceptors.response.use(
     const retryCount = retryStorage.get(originalConfig.requestId) || 0;
     
     // Проверяем, можем ли мы повторить запрос
-    const canRetry = retryCount < MAX_RETRIES && (
+    const canRetry = !originalConfig.noRetry && // Не повторяем, если установлен флаг noRetry
+                    retryCount < MAX_RETRIES && (
       // Повторяем при ошибках сети
       error.message.includes('Network Error') ||
       // Повторяем при таймауте

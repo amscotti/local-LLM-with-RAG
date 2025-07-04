@@ -138,6 +138,9 @@ export default {
           response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/query`, { 
             question: message,
             department_id: departmentId // Добавляем department_id в запрос
+          }, {
+            // Отключаем автоматические повторные попытки для запросов к LLM
+            noRetry: true
           });
           
           // Добавляем ответ в чат
@@ -150,6 +153,9 @@ export default {
           response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/generate`, {
             messages: message,
             department_id: departmentId // Добавляем department_id в запрос
+          }, {
+            // Отключаем автоматические повторные попытки для запросов к LLM
+            noRetry: true
           });
           
           // Добавляем ответ в чат
