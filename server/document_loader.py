@@ -58,6 +58,10 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     # Определяем директорию для хранения данных в зависимости от отдела
     department_directory = f"{PERSIST_DIRECTORY}/{department_id}"
 
+    # Создаем директорию для хранения данных, если она не существует
+    os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
+    os.makedirs(department_directory, exist_ok=True)
+
     # Проверяем существует ли директория для хранения данных
     if os.path.exists(department_directory) and not reload:
         print(f"Загрузка существующей базы данных Chroma для отдела {department_id}...")
@@ -74,7 +78,37 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     if not documents_path.startswith('/app/files/'):
         documents_path = f"/app/files/{documents_path}"
     
-    raw_documents = load_documents(documents_path)
+    # Проверяем существование пути к документам
+    if not os.path.exists(documents_path):
+        print(f"Путь к документам не существует: {documents_path}")
+        print(f"Текущая директория: {os.getcwd()}")
+        print(f"Содержимое директории /app/files/: {os.listdir('/app/files/') if os.path.exists('/app/files/') else 'директория не существует'}")
+        
+        # Создаем директорию, если она не существует
+        try:
+            os.makedirs(documents_path, exist_ok=True)
+            print(f"Создана директория: {documents_path}")
+            
+            # Если директория пуста, создаем пустой файл README.md
+            readme_path = os.path.join(documents_path, "README.md")
+            if not os.listdir(documents_path):
+                with open(readme_path, 'w') as f:
+                    f.write("# Директория для документов\n\nЭта директория создана для хранения документов для RAG.")
+                print(f"Создан файл README.md в {documents_path}")
+        except Exception as e:
+            print(f"Ошибка при создании директории: {e}")
+            raise FileNotFoundError(f"Не удалось создать директорию: {documents_path}. Ошибка: {e}")
+    
+    try:
+        raw_documents = load_documents(documents_path)
+    except Exception as e:
+        print(f"Ошибка при загрузке документов: {e}")
+        # Если нет документов, создаем пустую базу
+        return Chroma.from_documents(
+            documents=[],
+            embedding=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
+            persist_directory=department_directory
+        )
     
     # Если директория для хранения существует, получаем список уже загруженных файлов
     loaded_files = set()
@@ -168,6 +202,12 @@ def load_documents(path: str) -> List[Document]:
     if not os.path.exists(path):
         raise FileNotFoundError(f"The specified path does not exist: {path}")
 
+    # Проверяем, есть ли файлы в директории
+    files = os.listdir(path)
+    if not files:
+        print(f"Директория {path} пуста")
+        return []
+
     loaders = {
         ".pdf": DirectoryLoader(
             path,
@@ -183,28 +223,51 @@ def load_documents(path: str) -> List[Document]:
             show_progress=True,
         ),
     }
-# 
+
     docs = []
     for file_type, loader in loaders.items():
         print(f"Loading {file_type} files")
-        docs.extend(loader.load())
+        try:
+            docs.extend(loader.load())
+        except Exception as e:
+            print(f"Ошибка при загрузке файлов типа {file_type}: {e}")
+    
     return docs
 
 def vec_search(embedding_model, query, db, n_top_cos: int = 5):
     """
     Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
     """
-    # Кодируем запрос в вектор
-    query_emb = embedding_model.embed_documents([query])[0]
+    try:
+        # Кодируем запрос в вектор
+        query_emb = embedding_model.embed_documents([query])[0]
 
-    # Поиск в базе данных
-    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
+        # Поиск в базе данных
+        search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
 
-    # Извлечение фрагментов и файлов из метаданных
-    top_chunks = [x.metadata.get('chunk') for x in search_result]
-    top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
-
-    return top_chunks, top_files
+        # Извлечение фрагментов и файлов из метаданных
+        top_chunks = []
+        top_files = []
+        
+        for x in search_result:
+            if hasattr(x, 'page_content'):
+                top_chunks.append(x.page_content)
+            elif hasattr(x, 'metadata') and 'chunk' in x.metadata:
+                top_chunks.append(x.metadata.get('chunk'))
+                
+            if hasattr(x, 'metadata'):
+                if 'source' in x.metadata and x.metadata.get('source'):
+                    top_files.append(x.metadata.get('source'))
+                elif 'file' in x.metadata and x.metadata.get('file'):
+                    top_files.append(x.metadata.get('file'))
+        
+        # Удаляем дубликаты из списка файлов
+        top_files = list(set(top_files))
+        
+        return top_chunks, top_files
+    except Exception as e:
+        print(f"Ошибка при векторном поиске: {e}")
+        return [], []
 
 def rerank_results(query: str, results: List[Document], top_k: int = 5) -> List[Tuple[Document, float]]:
     """

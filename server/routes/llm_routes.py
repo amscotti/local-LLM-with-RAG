@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session
 from typing import Dict, Any, List
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 import traceback
+import threading
+import os
 
 from database import get_db
 from models_db import Department
@@ -13,6 +15,7 @@ from document_loader import load_documents_into_database, vec_search
 department_chats = {}  # {department_id: chat_instance}
 department_dbs = {}    # {department_id: db_instance}
 department_embedding_models = {}  # {department_id: embedding_model_instance}
+department_locks = {}  # {department_id: lock_instance} для синхронизации доступа
 
 # Создаем маршрутизатор
 router = APIRouter(prefix="/llm", tags=["llm"])
@@ -73,8 +76,13 @@ def get_available_models() -> Dict[str, List[str]]:
 
 # Функция для инициализации LLM
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str, department_id: str, reload: bool = False) -> bool:
-    global department_chats, department_dbs, department_embedding_models
+    global department_chats, department_dbs, department_embedding_models, department_locks
     print(f"Инициализация LLM для отдела {department_id}...")  # Отладочное сообщение
+    
+    # Создаем блокировку для этого отдела, если ее еще нет
+    if department_id not in department_locks:
+        department_locks[department_id] = threading.RLock()
+    
     try:
         print("Проверка доступности LLM модели...")
         check_if_model_is_available(llm_model_name)
@@ -86,11 +94,27 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
 
     try:
         print(f"Загрузка документов в базу данных для отдела {department_id}...")
+        
+        # Если путь к документам не начинается с /app/files/, добавляем этот префикс
+        if not documents_path.startswith('/app/files/'):
+            documents_path = f"/app/files/{documents_path}"
+        
+        # Проверяем существование директории
+        if not os.path.exists('/app/files/'):
+            print(f"Директория /app/files/ не существует. Создаем...")
+            os.makedirs('/app/files/', exist_ok=True)
+        
+        # Создаем директорию для хранения данных, если она не существует
+        storage_dir = "/app/files/storage"
+        department_dir = f"{storage_dir}/{department_id}"
+        os.makedirs(storage_dir, exist_ok=True)
+        os.makedirs(department_dir, exist_ok=True)
+        
         department_db = load_documents_into_database(embedding_model_name, documents_path, department_id, reload=reload)
         # Сохраняем базу данных для этого отдела
         department_dbs[department_id] = department_db
         # Инициализируем модель встраивания для векторного поиска
-        embedding_model = OllamaEmbeddings(model=embedding_model_name)
+        embedding_model = OllamaEmbeddings(model=embedding_model_name, base_url=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
         department_embedding_models[department_id] = embedding_model
         print(f"База данных для отдела {department_id} успешно инициализирована.")
     except FileNotFoundError as e:
@@ -100,7 +124,7 @@ def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_pat
     try:
         print("Создание LLM...")
         from llm import getChatChain
-        llm = ChatOllama(model=llm_model_name)
+        llm = ChatOllama(model=llm_model_name, base_url=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
         department_chat = getChatChain(llm, department_dbs[department_id])
         department_chats[department_id] = department_chat
         print(f"LLM для отдела {department_id} успешно инициализирован.")
@@ -121,8 +145,12 @@ async def generate(request: GenerateRequest):
         # Проверяем, доступна ли модель
         check_if_model_is_available(request.model)
         
-        # Создаем экземпляр модели
-        llm = ChatOllama(model=request.model)
+        # Создаем экземпляр модели с явным указанием URL Ollama
+        llm = ChatOllama(
+            model=request.model, 
+            base_url=os.environ.get("OLLAMA_HOST", "http://localhost:11434"),
+            temperature=0.7
+        )
         
         # Отправляем запрос напрямую к модели без использования RAG
         response = llm.invoke(request.messages)
@@ -154,39 +182,62 @@ async def query(request: QueryRequest):
     if department_id not in department_chats:
         raise HTTPException(status_code=400, detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /llm/initialize.")
     
-    print(f"Получен запрос для отдела {department_id}: {request}")  # Отладочное сообщение
-    user_question = request.question
+    # Получаем или создаем блокировку для этого отдела
+    if department_id not in department_locks:
+        department_locks[department_id] = threading.RLock()
+    
+    lock = department_locks[department_id]
+    acquired = lock.acquire(blocking=False)  # Пытаемся получить блокировку без ожидания
+    
+    if not acquired:
+        # Если блокировка уже занята, возвращаем сообщение о занятости
+        return {
+            "answer": "Сервис обрабатывает другой запрос. Пожалуйста, повторите попытку через несколько секунд.",
+            "chunks": [],
+            "files": []
+        }
     
     try:
-        # Выполняем векторный поиск фрагментов
-        top_chunks, top_files = vec_search(department_embedding_models[department_id], user_question, department_dbs[department_id], n_top_cos=5)
-    except Exception as e:
-        error_message = f"Ошибка при векторном поиске: {str(e)}"
-        print(error_message)
-        print(traceback.format_exc())
-        raise HTTPException(status_code=400, detail=error_message)
-    
-    try:
-        response = department_chats[department_id](user_question)
-        print(f"Ответ от LLM для отдела {department_id}: {response}")  # Отладочное сообщение
+        print(f"Получен запрос для отдела {department_id}: {request}")  # Отладочное сообщение
+        user_question = request.question
         
-        if response is None:
-            print("Получен пустой ответ от LLM")
-            return {"answer": "Не удалось получить ответ от модели. Пожалуйста, попробуйте позже или переформулируйте вопрос.", "chunks": top_chunks, "files": top_files}
+        try:
+            # Выполняем векторный поиск фрагментов
+            top_chunks, top_files = vec_search(department_embedding_models[department_id], user_question, department_dbs[department_id], n_top_cos=5)
+        except Exception as e:
+            error_message = f"Ошибка при векторном поиске: {str(e)}"
+            print(error_message)
+            print(traceback.format_exc())
+            return {
+                "answer": f"Ошибка при поиске релевантных документов: {str(e)}",
+                "chunks": [],
+                "files": []
+            }
         
-        # Проверяем, начинается ли ответ с "Произошла ошибка"
-        if isinstance(response, str) and response.startswith("Произошла ошибка"):
-            print(f"LLM вернул сообщение об ошибке: {response}")
+        try:
+            response = department_chats[department_id](user_question)
+            print(f"Ответ от LLM для отдела {department_id}: {response}")  # Отладочное сообщение
+            
+            if response is None:
+                print("Получен пустой ответ от LLM")
+                return {"answer": "Не удалось получить ответ от модели. Пожалуйста, попробуйте позже или переформулируйте вопрос.", "chunks": top_chunks, "files": top_files}
+            
+            # Проверяем, начинается ли ответ с "Произошла ошибка"
+            if isinstance(response, str) and response.startswith("Произошла ошибка"):
+                print(f"LLM вернул сообщение об ошибке: {response}")
+                # Возвращаем сообщение об ошибке как ответ, но с кодом 200
+                return {"answer": "Произошла ошибка при генерации ответа. Пожалуйста, попробуйте позже или переформулируйте вопрос.", "chunks": top_chunks, "files": top_files}
+            
+            return {"answer": response, "chunks": top_chunks, "files": top_files}
+        except Exception as e:
+            error_message = f"Ошибка при обработке запроса: {str(e)}"
+            print(error_message)
+            print(traceback.format_exc())
             # Возвращаем сообщение об ошибке как ответ, но с кодом 200
-            return {"answer": "Произошла ошибка при генерации ответа. Пожалуйста, попробуйте позже или переформулируйте вопрос.", "chunks": top_chunks, "files": top_files}
-        
-        return {"answer": response, "chunks": top_chunks, "files": top_files}
-    except Exception as e:
-        error_message = f"Ошибка при обработке запроса: {str(e)}"
-        print(error_message)
-        print(traceback.format_exc())
-        # Возвращаем сообщение об ошибке как ответ, но с кодом 200
-        return {"answer": f"Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже или переформулируйте вопрос. Детали: {str(e)}", "chunks": top_chunks, "files": top_files}
+            return {"answer": f"Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже или переформулируйте вопрос. Детали: {str(e)}", "chunks": top_chunks, "files": top_files}
+    finally:
+        # Освобождаем блокировку в любом случае
+        lock.release()
 
 @router.post("/initialize")
 async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
@@ -211,8 +262,16 @@ async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
             raise HTTPException(status_code=500, detail="Не удалось инициализировать модель")
             
         return {"message": f"Модель для отдела {request.department_id} успешно инициализирована"}
+    except FileNotFoundError as e:
+        error_message = f"Ошибка при поиске файлов: {str(e)}"
+        print(error_message)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=error_message)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        error_message = f"Ошибка при инициализации модели: {str(e)}"
+        print(error_message)
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=error_message)
 
 @router.get("/models")
 async def get_models():
