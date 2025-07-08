@@ -89,7 +89,10 @@ export default {
       userMessage: "",
       chatMessages: [],
       isLoading: false,
-      chatMode: "rag" // По умолчанию используем режим с RAG
+      chatMode: "rag", // По умолчанию используем режим с RAG
+      requestInProgress: false, // Флаг для отслеживания текущего запроса
+      requestTimeout: null, // Таймер для отмены запроса
+      lastRequestTime: 0 // Время последнего запроса
     };
   },
   methods: {
@@ -101,17 +104,35 @@ export default {
     async sendMessage() {
       if (!this.userMessage.trim()) return;
       
+      // Защита от слишком частых запросов
+      const now = Date.now();
+      if (now - this.lastRequestTime < 1000) { // Минимальный интервал между запросами - 1 секунда
+        console.warn("Запросы отправляются слишком часто. Пожалуйста, подождите.");
+        return;
+      }
+      
+      // Защита от повторных запросов
+      if (this.requestInProgress) {
+        console.warn("Предыдущий запрос еще обрабатывается. Пожалуйста, подождите.");
+        return;
+      }
+      
+      this.lastRequestTime = now;
+      this.requestInProgress = true;
+      
       const userId = localStorage.getItem("userId");
       const departmentId = localStorage.getItem("departmentId");
       const isAuthenticated = localStorage.getItem("isAuthenticated");
       
       if (!isAuthenticated || isAuthenticated !== "true") {
         console.error("Пользователь не аутентифицирован.");
+        this.requestInProgress = false;
         return; // Прекращаем выполнение, если пользователь не аутентифицирован
       }
       
       if (!departmentId) {
         console.error("department_id не найден. Убедитесь, что пользователь вошел в систему.");
+        this.requestInProgress = false;
         return; // Прекращаем выполнение, если departmentId отсутствует
       }
       
@@ -129,6 +150,18 @@ export default {
       const message = this.userMessage;
       this.userMessage = "";
       this.isLoading = true;
+      
+      // Устанавливаем таймаут для запроса (30 секунд)
+      this.requestTimeout = setTimeout(() => {
+        if (this.isLoading) {
+          this.isLoading = false;
+          this.requestInProgress = false;
+          this.chatMessages.push({
+            role: 'assistant',
+            content: 'Запрос занял слишком много времени и был отменен. Пожалуйста, попробуйте еще раз или переформулируйте вопрос.'
+          });
+        }
+      }, 30000);
       
       try {
         let response;
@@ -173,7 +206,15 @@ export default {
           content: `Произошла ошибка: ${error.response?.data?.detail || error.message || 'Неизвестная ошибка'}`
         });
       } finally {
+        // Очищаем таймаут
+        if (this.requestTimeout) {
+          clearTimeout(this.requestTimeout);
+          this.requestTimeout = null;
+        }
+        
         this.isLoading = false;
+        this.requestInProgress = false;
+        
         // Прокручиваем чат вниз
         this.$nextTick(() => {
           const chatContainer = document.querySelector('.chat-container');

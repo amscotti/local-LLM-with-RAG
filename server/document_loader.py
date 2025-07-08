@@ -9,6 +9,9 @@ from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+import time
+import concurrent.futures
+import threading
 
 # Изменяем директорию для хранения данных на /app/files/storage
 PERSIST_DIRECTORY = "/app/files/storage"
@@ -16,7 +19,7 @@ TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324
 # Получение URL для Ollama из переменной окружения или использование значения по умолчанию
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
-def vec_search(embedding_model, query, db, n_top_cos: int = 5):
+def vec_search(embedding_model, query, db, n_top_cos: int = 5, timeout: int = 15):
     """
     Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
     
@@ -25,21 +28,76 @@ def vec_search(embedding_model, query, db, n_top_cos: int = 5):
         query (str): Текст запроса
         db: Векторная база данных
         n_top_cos (int): Количество результатов для возврата
+        timeout (int): Таймаут в секундах для операции поиска
         
     Returns:
         tuple: Кортеж из двух списков - топ-фрагменты и топ-файлы
     """
-    # Кодируем запрос в вектор
-    query_emb = embedding_model.embed_documents([query])[0]
-
-    # Поиск в базе данных
-    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
-
-    # Извлечение фрагментов и файлов из метаданных
-    top_chunks = [x.page_content for x in search_result]
-    top_files = list({x.metadata.get('source') for x in search_result if x.metadata.get('source')})
-
-    return top_chunks, top_files
+    start_time = time.time()
+    result = []
+    error = None
+    
+    # Функция для выполнения поиска в отдельном потоке
+    def search_task():
+        nonlocal result, error
+        try:
+            # Кодируем запрос в вектор
+            print(f"Начало создания эмбеддинга для запроса: {query[:50]}...")
+            query_emb = embedding_model.embed_documents([query])[0]
+            print(f"Эмбеддинг создан за {time.time() - start_time:.2f} секунд")
+            
+            # Поиск в базе данных
+            print("Начало поиска в векторной базе...")
+            search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
+            print(f"Поиск выполнен за {time.time() - start_time:.2f} секунд")
+            
+            # Извлечение фрагментов и файлов из метаданных
+            top_chunks = []
+            top_files = []
+            
+            for x in search_result:
+                if hasattr(x, 'page_content'):
+                    top_chunks.append(x.page_content)
+                elif hasattr(x, 'metadata') and 'chunk' in x.metadata:
+                    top_chunks.append(x.metadata.get('chunk'))
+                    
+                if hasattr(x, 'metadata'):
+                    if 'source' in x.metadata and x.metadata.get('source'):
+                        top_files.append(x.metadata.get('source'))
+                    elif 'file' in x.metadata and x.metadata.get('file'):
+                        top_files.append(x.metadata.get('file'))
+            
+            # Удаляем дубликаты из списка файлов
+            top_files = list(set(top_files))
+            
+            result = [top_chunks, top_files]
+        except Exception as e:
+            import traceback
+            print(f"Ошибка в vec_search: {e}")
+            print(traceback.format_exc())
+            error = e
+    
+    # Запускаем поиск в отдельном потоке с таймаутом
+    search_thread = threading.Thread(target=search_task)
+    search_thread.daemon = True
+    search_thread.start()
+    search_thread.join(timeout)
+    
+    if search_thread.is_alive():
+        # Если поток все еще выполняется после таймаута
+        print(f"Превышен таймаут ({timeout} сек) при выполнении векторного поиска")
+        return [], []
+    
+    if error:
+        print(f"Произошла ошибка при векторном поиске: {error}")
+        return [], []
+    
+    if not result:
+        print("Векторный поиск не вернул результатов")
+        return [], []
+    
+    print(f"Векторный поиск успешно завершен за {time.time() - start_time:.2f} секунд")
+    return result[0], result[1]
 
 def load_documents_into_database(model_name: str, documents_path: str, department_id: str, reload: bool = True) -> Chroma:
     """
@@ -233,41 +291,6 @@ def load_documents(path: str) -> List[Document]:
             print(f"Ошибка при загрузке файлов типа {file_type}: {e}")
     
     return docs
-
-def vec_search(embedding_model, query, db, n_top_cos: int = 5):
-    """
-    Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
-    """
-    try:
-        # Кодируем запрос в вектор
-        query_emb = embedding_model.embed_documents([query])[0]
-
-        # Поиск в базе данных
-        search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
-
-        # Извлечение фрагментов и файлов из метаданных
-        top_chunks = []
-        top_files = []
-        
-        for x in search_result:
-            if hasattr(x, 'page_content'):
-                top_chunks.append(x.page_content)
-            elif hasattr(x, 'metadata') and 'chunk' in x.metadata:
-                top_chunks.append(x.metadata.get('chunk'))
-                
-            if hasattr(x, 'metadata'):
-                if 'source' in x.metadata and x.metadata.get('source'):
-                    top_files.append(x.metadata.get('source'))
-                elif 'file' in x.metadata and x.metadata.get('file'):
-                    top_files.append(x.metadata.get('file'))
-        
-        # Удаляем дубликаты из списка файлов
-        top_files = list(set(top_files))
-        
-        return top_chunks, top_files
-    except Exception as e:
-        print(f"Ошибка при векторном поиске: {e}")
-        return [], []
 
 def rerank_results(query: str, results: List[Document], top_k: int = 5) -> List[Tuple[Document, float]]:
     """
