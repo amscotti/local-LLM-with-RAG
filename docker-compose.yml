@@ -31,7 +31,8 @@ services:
       - DATABASE_URL=mysql+mysqlconnector://root:${MYSQL_ROOT_PASSWORD:-123123}@db:3306/${MYSQL_DATABASE:-db}
       - DEBUG=${DEBUG:-False}
       - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_NUM_PARALLEL=4
+      - OLLAMA_MAX_QUEUE=200
     depends_on:
       db:
         condition: service_healthy
