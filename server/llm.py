@@ -1,6 +1,7 @@
 from operator import itemgetter
 import asyncio
 import concurrent.futures
+import os
 from typing import Dict, Any
 
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
@@ -71,16 +72,24 @@ def _combine_documents(
                 source = doc.metadata.get('source', source)
                 page = doc.metadata.get('page', page)
             
-            # Формируем контент с заголовком
-            content = f"📄 Документ {i}\n"
-            content += f"📁 Файл: {source}\n"
+            # Извлекаем имя файла из пути для красивого отображения
+            filename = os.path.basename(source) if source != "Неизвестный источник" else f"Документ {i}"
+            
+            # Формируем контент с названием файла вместо номера
+            content = f"📄 {filename}\n"
+            content += f"📁 Путь: {source}\n"
             content += f"📄 Страница: {page}\n"
             content += f"📝 Содержание:\n{doc.page_content}\n"
             
             doc_strings.append(content)
         except Exception as e:
             print(f"Ошибка при обработке документа {i}: {e}")
-            doc_strings.append(f"📄 Документ {i}: Ошибка обработки")
+            # Используем имя файла в ошибке, если возможно
+            try:
+                filename = os.path.basename(source) if 'source' in locals() and source != "Неизвестный источник" else f"Документ {i}"
+            except:
+                filename = f"Документ {i}"
+            doc_strings.append(f"📄 {filename}: Ошибка обработки")
     
     result = document_separator.join(doc_strings)
     print(f"Объединено {len(doc_strings)} документов в контекст размером {len(result)} символов")
