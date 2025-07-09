@@ -129,7 +129,7 @@ async def process_query_task(task_id: str):
                     embedding_model, 
                     user_question, 
                     department_db, 
-                    n_top_cos=10
+                    n_top_cos=6  # Уменьшено для ускорения
                 ),
                 timeout=EMBEDDING_REQUEST_TIMEOUT
             )

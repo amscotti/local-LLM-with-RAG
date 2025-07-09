@@ -144,7 +144,7 @@ def getChatChain(llm, db):
     retriever = db.as_retriever(
         search_type="similarity",
         search_kwargs={
-            "k": 8,  # Оптимальное количество для баланса качества и скорости
+            "k": 6,  # Ускорение: меньше документов = быстрее генерация
         }
     )
 
@@ -218,7 +218,7 @@ def getAsyncChatChain(llm, db):
     retriever = db.as_retriever(
         search_type="similarity",
         search_kwargs={
-            "k": 8,  # Оптимальное количество для баланса качества и скорости
+            "k": 6,  # Ускорение: меньше документов = быстрее генерация
         }
     )
 

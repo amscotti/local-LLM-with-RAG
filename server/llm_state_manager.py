@@ -68,8 +68,8 @@ class LLMStateManager:
         self.active_tasks = {}  # Словарь активных задач по отделам
         self.all_tasks = {}  # Все задачи (включая завершенные)
         
-        # Настройки - БАЛАНС между скоростью и стабильностью  
-        self.max_concurrent_requests_per_department = 2  # 2 запроса: embedding + генерация
+        # Настройки - ОПТИМИЗАЦИЯ скорости с сохранением стабильности  
+        self.max_concurrent_requests_per_department = 3  # 3 запроса после оптимизации
         
         # Глобальная блокировка для thread-safety
         self.global_lock = threading.Lock()
@@ -143,7 +143,7 @@ class LLMStateManager:
                 
                 # Создаем семафор для отдела, если его еще нет  
                 if department_id not in self.department_semaphores:
-                    self.department_semaphores[department_id] = asyncio.Semaphore(2)  # 2 параллельных запроса
+                    self.department_semaphores[department_id] = asyncio.Semaphore(3)  # 3 параллельных запроса после оптимизации
                 
                 # Создаем очередь для отдела, если ее еще нет
                 if department_id not in self.department_queues:
@@ -163,11 +163,13 @@ class LLMStateManager:
             llm = ChatOllama(
                 model=llm_model_name, 
                 base_url=OLLAMA_HOST,
-                temperature=0.1,  # Меньше креативности = быстрее генерация
-                num_predict=512,  # Ограничиваем длину ответа для скорости
-                top_k=10,  # Меньше вариантов = быстрее
-                top_p=0.9,  # Более фокусированная генерация
-                repeat_penalty=1.1  # Избегаем повторений
+                temperature=0.05,  # Минимальная креативность = максимальная скорость
+                num_predict=256,  # Еще меньше токенов = быстрее генерация
+                top_k=5,  # Минимум вариантов = максимум скорости
+                top_p=0.8,  # Более строгая фокусировка
+                repeat_penalty=1.1,  # Избегаем повторений
+                num_thread=8,  # Используем больше потоков CPU
+                num_batch=1  # Минимальный batch для скорости
             )
             department_chat = getChatChain(llm, self.department_databases[department_id])
             department_async_chat = getAsyncChatChain(llm, self.department_databases[department_id])
@@ -256,8 +258,8 @@ class LLMStateManager:
         """Получает семафор для отдела, создавая его при необходимости"""
         with self.global_lock:
             if department_id not in self.department_semaphores:
-                # 2 параллельных запроса для embedding + генерации
-                self.department_semaphores[department_id] = asyncio.Semaphore(2)
+                # 3 параллельных запроса после оптимизации
+                self.department_semaphores[department_id] = asyncio.Semaphore(3)
             return self.department_semaphores[department_id]
     
     def get_department_queue(self, department_id: str) -> Optional[asyncio.Queue]:
@@ -315,7 +317,7 @@ class LLMStateManager:
             pending_tasks = [t for t in active_tasks if t.status == "pending"]
             
             # Обновляем максимальное количество одновременных запросов
-            max_concurrent = 2  # Embedding + генерация параллельно
+            max_concurrent = 3  # Оптимизированная параллельная обработка
             available_slots = max_concurrent - len(processing_tasks) if semaphore else 0
             
             return {

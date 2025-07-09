@@ -61,7 +61,7 @@ def vec_search(embedding_model, query, db, n_top_cos: int = 10, timeout: int = 2
         if filtered_query and filtered_query != original_query:
             queries.append(filtered_query)
         
-        return queries[:3]  # Ограничиваем количество вариантов
+        return queries[:2]  # Оптимизация: только 2 варианта вместо 3
     
     # Функция для выполнения поиска в отдельном потоке
     def search_task():
@@ -82,27 +82,19 @@ def vec_search(embedding_model, query, db, n_top_cos: int = 10, timeout: int = 2
                 # Кодируем запрос в вектор
                 query_emb = embedding_model.embed_documents([q])[0]
                 
-                # Выполняем разные типы поиска
-                search_methods = [
-                    # Стандартный поиск по сходству
-                    lambda: db.similarity_search_by_vector(query_emb, k=n_top_cos),
-                    # Поиск с порогом сходства
-                    lambda: db.similarity_search_by_vector(query_emb, k=n_top_cos*2)[:n_top_cos]
-                ]
-                
-                for method in search_methods:
-                    try:
-                        search_result = method()
-                        for doc in search_result:
-                            content = doc.page_content if hasattr(doc, 'page_content') else str(doc)
-                            # Избегаем дубликатов по содержимому
-                            content_hash = hash(content[:100])  # Используем первые 100 символов для хеша
-                            if content_hash not in seen_content:
-                                seen_content.add(content_hash)
-                                all_results.append(doc)
-                    except Exception as method_error:
-                        print(f"Ошибка в методе поиска: {method_error}")
-                        continue
+                # Оптимизированный поиск - только один быстрый метод
+                try:
+                    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
+                    for doc in search_result:
+                        content = doc.page_content if hasattr(doc, 'page_content') else str(doc)
+                        # Избегаем дубликатов по содержимому
+                        content_hash = hash(content[:100])  # Используем первые 100 символов для хеша
+                        if content_hash not in seen_content:
+                            seen_content.add(content_hash)
+                            all_results.append(doc)
+                except Exception as method_error:
+                    print(f"Ошибка в поиске: {method_error}")
+                    continue
             
             # Сортируем результаты и берем топ
             if len(all_results) > n_top_cos:
