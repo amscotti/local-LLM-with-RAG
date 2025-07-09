@@ -225,7 +225,7 @@ class ContentBase(BaseModel):
     file_path: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 @router.get("/content/filter")
 async def get_content_by_access_and_department(

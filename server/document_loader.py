@@ -15,13 +15,19 @@ import threading
 
 # Изменяем директорию для хранения данных на /app/files/storage
 PERSIST_DIRECTORY = "/app/files/storage"
-TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324)
+# Улучшенные параметры для лучшего качества RAG
+TEXT_SPLITTER = RecursiveCharacterTextSplitter(
+    chunk_size=1500,  # Увеличиваем размер чанка для лучшего контекста
+    chunk_overlap=200,  # Оптимизируем перекрытие
+    length_function=len,
+    separators=["\n\n", "\n", ". ", " ", ""]  # Более точные разделители
+)
 # Получение URL для Ollama из переменной окружения или использование значения по умолчанию
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
-def vec_search(embedding_model, query, db, n_top_cos: int = 5, timeout: int = 15):
+def vec_search(embedding_model, query, db, n_top_cos: int = 10, timeout: int = 20):
     """
-    Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
+    Улучшенный поиск в векторной базе Chroma с множественными стратегиями поиска.
     
     Args:
         embedding_model: Модель для создания эмбеддингов
@@ -37,31 +43,88 @@ def vec_search(embedding_model, query, db, n_top_cos: int = 5, timeout: int = 15
     result = []
     error = None
     
+    def enhance_query(original_query: str) -> List[str]:
+        """Генерирует дополнительные варианты запроса для лучшего поиска"""
+        queries = [original_query]
+        
+        # Добавляем ключевые слова
+        words = original_query.lower().split()
+        if len(words) > 1:
+            # Добавляем отдельные ключевые слова
+            for word in words:
+                if len(word) > 3:  # Игнорируем короткие слова
+                    queries.append(word)
+        
+        # Добавляем варианты без вопросительных слов
+        question_words = ['что', 'как', 'где', 'когда', 'почему', 'какой', 'кто']
+        filtered_query = ' '.join([word for word in words if word not in question_words])
+        if filtered_query and filtered_query != original_query:
+            queries.append(filtered_query)
+        
+        return queries[:3]  # Ограничиваем количество вариантов
+    
     # Функция для выполнения поиска в отдельном потоке
     def search_task():
         nonlocal result, error
         try:
-            # Кодируем запрос в вектор
-            print(f"Начало создания эмбеддинга для запроса: {query[:50]}...")
-            query_emb = embedding_model.embed_documents([query])[0]
-            print(f"Эмбеддинг создан за {time.time() - start_time:.2f} секунд")
+            print(f"Начало улучшенного поиска для запроса: {query[:50]}...")
             
-            # Поиск в базе данных
-            print("Начало поиска в векторной базе...")
-            search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
-            print(f"Поиск выполнен за {time.time() - start_time:.2f} секунд")
+            # Генерируем варианты запроса
+            query_variants = enhance_query(query)
+            print(f"Сгенерировано {len(query_variants)} вариантов запроса")
+            
+            all_results = []
+            seen_content = set()
+            
+            for i, q in enumerate(query_variants):
+                print(f"Поиск по варианту {i+1}: {q[:30]}...")
+                
+                # Кодируем запрос в вектор
+                query_emb = embedding_model.embed_documents([q])[0]
+                
+                # Выполняем разные типы поиска
+                search_methods = [
+                    # Стандартный поиск по сходству
+                    lambda: db.similarity_search_by_vector(query_emb, k=n_top_cos),
+                    # Поиск с порогом сходства
+                    lambda: db.similarity_search_by_vector(query_emb, k=n_top_cos*2)[:n_top_cos]
+                ]
+                
+                for method in search_methods:
+                    try:
+                        search_result = method()
+                        for doc in search_result:
+                            content = doc.page_content if hasattr(doc, 'page_content') else str(doc)
+                            # Избегаем дубликатов по содержимому
+                            content_hash = hash(content[:100])  # Используем первые 100 символов для хеша
+                            if content_hash not in seen_content:
+                                seen_content.add(content_hash)
+                                all_results.append(doc)
+                    except Exception as method_error:
+                        print(f"Ошибка в методе поиска: {method_error}")
+                        continue
+            
+            # Сортируем результаты и берем топ
+            if len(all_results) > n_top_cos:
+                # Простая сортировка по длине - более длинные фрагменты часто содержат больше контекста
+                all_results.sort(key=lambda x: len(x.page_content) if hasattr(x, 'page_content') else 0, reverse=True)
+                all_results = all_results[:n_top_cos]
+            
+            print(f"Найдено {len(all_results)} уникальных результатов")
             
             # Извлечение фрагментов и файлов из метаданных
             top_chunks = []
             top_files = []
             
-            for x in search_result:
-                if hasattr(x, 'page_content'):
+            for x in all_results:
+                if hasattr(x, 'page_content') and x.page_content.strip():
                     top_chunks.append(x.page_content)
                 elif hasattr(x, 'metadata') and 'chunk' in x.metadata:
-                    top_chunks.append(x.metadata.get('chunk'))
+                    chunk_content = x.metadata.get('chunk')
+                    if chunk_content and chunk_content.strip():
+                        top_chunks.append(chunk_content)
                     
-                if hasattr(x, 'metadata'):
+                if hasattr(x, 'metadata') and x.metadata:
                     if 'source' in x.metadata and x.metadata.get('source'):
                         top_files.append(x.metadata.get('source'))
                     elif 'file' in x.metadata and x.metadata.get('file'):
@@ -69,6 +132,11 @@ def vec_search(embedding_model, query, db, n_top_cos: int = 5, timeout: int = 15
             
             # Удаляем дубликаты из списка файлов
             top_files = list(set(top_files))
+            
+            # Фильтруем слишком короткие чанки
+            top_chunks = [chunk for chunk in top_chunks if len(chunk.strip()) > 50]
+            
+            print(f"Отфильтровано {len(top_chunks)} содержательных фрагментов из {len(top_files)} файлов")
             
             result = [top_chunks, top_files]
         except Exception as e:
@@ -96,7 +164,7 @@ def vec_search(embedding_model, query, db, n_top_cos: int = 5, timeout: int = 15
         print("Векторный поиск не вернул результатов")
         return [], []
     
-    print(f"Векторный поиск успешно завершен за {time.time() - start_time:.2f} секунд")
+    print(f"Улучшенный векторный поиск успешно завершен за {time.time() - start_time:.2f} секунд")
     return result[0], result[1]
 
 def load_documents_into_database(model_name: str, documents_path: str, department_id: str, reload: bool = True) -> Chroma:

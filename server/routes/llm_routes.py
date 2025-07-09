@@ -2,25 +2,14 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Dict, Any, List
-from langchain_ollama import ChatOllama, OllamaEmbeddings
+from langchain_ollama import ChatOllama
 import traceback
 import time
-from threading import Lock
 
 from database import get_db
 from models_db import Department
-from document_loader import load_documents_into_database, vec_search
-
-# Глобальные переменные для хранения экземпляров чатов и баз данных для каждого отдела
-department_chats = {}  # {department_id: chat_instance}
-department_dbs = {}    # {department_id: db_instance}
-department_embedding_models = {}  # {department_id: embedding_model_instance}
-
-# Блокировки для защиты от одновременных запросов к одному отделу
-department_locks = {}  # {department_id: Lock()}
-
-# Глобальная блокировка для защиты доступа к словарям department_*
-global_lock = Lock()
+from document_loader import vec_search
+from llm_state_manager import llm_state_manager
 
 # Создаем маршрутизатор
 router = APIRouter(prefix="/llm", tags=["llm"])
@@ -44,90 +33,7 @@ class GenerateResponse(BaseModel):
     text: str
     model: str = "gemma3"
 
-# Функция для проверки доступности модели
-def check_if_model_is_available(model_name: str) -> bool:
-    # Список доступных моделей, можно расширить по необходимости
-    available_models = [
-        "gemma3", 
-        "nomic-embed-text",
-        "ilyagusev/saiga_llama3:latest",
-        "snowflake-arctic-embed2:latest",
-    ]
-    
-    # Проверка доступности модели
-    if model_name not in available_models:
-        raise ValueError(f"Модель '{model_name}' недоступна. Доступные модели: {', '.join(available_models)}")
-    
-    return True
-
-# Функция для получения списка доступных моделей
-def get_available_models() -> Dict[str, List[str]]:
-    # Список моделей LLM
-    llm_models = [
-        "gemma3",
-        "ilyagusev/saiga_llama3:latest", 
-    ]
-    
-    # Список моделей эмбеддингов
-    embedding_models = [
-        "nomic-embed-text",
-        "snowflake-arctic-embed2:latest", 
-    ]
-    
-    return {
-        "llm_models": llm_models,
-        "embedding_models": embedding_models
-    }
-
-# Функция для инициализации LLM
-def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str, department_id: str, reload: bool = False) -> bool:
-    global department_chats, department_dbs, department_embedding_models, department_locks, global_lock
-    print(f"Инициализация LLM для отдела {department_id}...")  # Отладочное сообщение
-    try:
-        print("Проверка доступности LLM модели...")
-        check_if_model_is_available(llm_model_name)
-        print("Проверка доступности модели встраивания...")
-        check_if_model_is_available(embedding_model_name)
-    except Exception as e:
-        print(f"Ошибка при проверке доступности моделей: {e}")
-        return False
-
-    try:
-        print(f"Загрузка документов в базу данных для отдела {department_id}...")
-        department_db = load_documents_into_database(embedding_model_name, documents_path, department_id, reload=reload)
-        
-        # Используем глобальную блокировку для обновления словарей
-        with global_lock:
-            # Сохраняем базу данных для этого отдела
-            department_dbs[department_id] = department_db
-            # Инициализируем модель встраивания для векторного поиска
-            embedding_model = OllamaEmbeddings(model=embedding_model_name)
-            department_embedding_models[department_id] = embedding_model
-            # Создаем блокировку для отдела, если ее еще нет
-            if department_id not in department_locks:
-                department_locks[department_id] = Lock()
-        
-        print(f"База данных для отдела {department_id} успешно инициализирована.")
-    except FileNotFoundError as e:
-        print(f"Ошибка при загрузке документов: {e}")
-        return False
-
-    try:
-        print("Создание LLM...")
-        from llm import getChatChain
-        llm = ChatOllama(model=llm_model_name)
-        department_chat = getChatChain(llm, department_dbs[department_id])
-        
-        # Используем глобальную блокировку для обновления словаря department_chats
-        with global_lock:
-            department_chats[department_id] = department_chat
-        
-        print(f"LLM для отдела {department_id} успешно инициализирован.")
-    except Exception as e:
-        print(f"Ошибка при создании LLM: {e}")
-        return False
-
-    return True
+# Все функции для работы с моделями теперь в LLMStateManager
 
 # Эндпоинты
 
@@ -138,7 +44,7 @@ async def generate(request: GenerateRequest):
     """
     try:
         # Проверяем, доступна ли модель
-        check_if_model_is_available(request.model)
+        llm_state_manager.check_if_model_is_available(request.model)
         
         # Создаем экземпляр модели
         llm = ChatOllama(model=request.model)
@@ -170,42 +76,44 @@ async def query(request: QueryRequest):
     """
     department_id = request.department_id
     
-    # Используем глобальную блокировку для проверки наличия отдела в словаре
-    with global_lock:
-        department_exists = department_id in department_chats
-        if not department_exists:
-            raise HTTPException(status_code=400, detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /llm/initialize.")
-        
-        # Получаем блокировку для отдела
-        if department_id not in department_locks:
-            department_locks[department_id] = Lock()
+    # Проверяем инициализацию отдела
+    if not llm_state_manager.is_department_initialized(department_id):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"LLM для отдела {department_id} не инициализирован. Сначала инициализируйте его через /llm/initialize."
+        )
+    
+    # Получаем блокировку для отдела
+    department_lock = llm_state_manager.get_department_lock(department_id)
     
     # Проверяем, удалось ли получить блокировку
-    if not department_locks[department_id].acquire(blocking=False):
+    if not department_lock.acquire(blocking=False):
         # Если блокировка уже занята, возвращаем ошибку занятости
-        raise HTTPException(status_code=429, detail=f"LLM для отдела {department_id} сейчас занят обработкой другого запроса. Пожалуйста, повторите попытку позже.")
+        raise HTTPException(
+            status_code=429, 
+            detail=f"LLM для отдела {department_id} сейчас занят обработкой другого запроса. Пожалуйста, повторите попытку позже."
+        )
     
     try:
-        print(f"Получен запрос для отдела {department_id}: {request}")  # Отладочное сообщение
+        print(f"Получен запрос для отдела {department_id}: {request}")
         user_question = request.question
         
         start_time = time.time()
         
         try:
-            # Используем глобальную блокировку для доступа к словарям
-            with global_lock:
-                embedding_model = department_embedding_models.get(department_id)
-                department_db = department_dbs.get(department_id)
+            # Получаем модель встраивания и базу данных
+            embedding_model = llm_state_manager.get_department_embedding_model(department_id)
+            department_db = llm_state_manager.get_department_db(department_id)
             
             if not embedding_model or not department_db:
                 raise ValueError(f"Модель встраивания или база данных для отдела {department_id} не найдены")
                 
-            # Выполняем векторный поиск фрагментов с таймаутом
+            # Выполняем векторный поиск фрагментов с улучшенными параметрами
             top_chunks, top_files = vec_search(
                 embedding_model, 
                 user_question, 
                 department_db, 
-                n_top_cos=5
+                n_top_cos=10  # Увеличиваем количество результатов
             )
             
             print(f"Векторный поиск выполнен за {time.time() - start_time:.2f} секунд")
@@ -223,9 +131,8 @@ async def query(request: QueryRequest):
             top_files = []
         
         try:
-            # Используем глобальную блокировку для доступа к словарю department_chats
-            with global_lock:
-                chat_instance = department_chats.get(department_id)
+            # Получаем экземпляр чата
+            chat_instance = llm_state_manager.get_department_chat(department_id)
             
             if not chat_instance:
                 raise ValueError(f"Экземпляр чата для отдела {department_id} не найден")
@@ -237,13 +144,21 @@ async def query(request: QueryRequest):
             
             if response is None:
                 print("Получен пустой ответ от LLM")
-                return {"answer": "Не удалось получить ответ от модели. Пожалуйста, попробуйте позже или переформулируйте вопрос.", "chunks": top_chunks, "files": top_files}
+                return {
+                    "answer": "Не удалось получить ответ от модели. Пожалуйста, попробуйте позже или переформулируйте вопрос.", 
+                    "chunks": top_chunks, 
+                    "files": top_files
+                }
             
             # Проверяем, начинается ли ответ с "Произошла ошибка"
             if isinstance(response, str) and response.startswith("Произошла ошибка"):
                 print(f"LLM вернул сообщение об ошибке: {response}")
                 # Возвращаем сообщение об ошибке как ответ, но с кодом 200
-                return {"answer": "Произошла ошибка при генерации ответа. Пожалуйста, попробуйте позже или переформулируйте вопрос.", "chunks": top_chunks, "files": top_files}
+                return {
+                    "answer": "Произошла ошибка при генерации ответа. Пожалуйста, попробуйте позже или переформулируйте вопрос.", 
+                    "chunks": top_chunks, 
+                    "files": top_files
+                }
             
             total_time = time.time() - start_time
             print(f"Общее время обработки запроса: {total_time:.2f} секунд")
@@ -254,10 +169,14 @@ async def query(request: QueryRequest):
             print(error_message)
             print(traceback.format_exc())
             # Возвращаем сообщение об ошибке как ответ, но с кодом 200
-            return {"answer": f"Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже или переформулируйте вопрос. Детали: {str(e)}", "chunks": top_chunks, "files": top_files}
+            return {
+                "answer": f"Произошла ошибка при обработке запроса. Пожалуйста, попробуйте позже или переформулируйте вопрос. Детали: {str(e)}", 
+                "chunks": top_chunks, 
+                "files": top_files
+            }
     finally:
         # Освобождаем блокировку
-        department_locks[department_id].release()
+        department_lock.release()
 
 @router.post("/initialize")
 async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
@@ -271,7 +190,7 @@ async def initialize_model(request: InitRequest, db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail=f"Отдел с ID {request.department_id} не найден")
         
         # Вызов функции инициализации с учетом отдела
-        success = initialize_llm(
+        success = llm_state_manager.initialize_llm(
             request.model_name, 
             request.embedding_model_name, 
             request.documents_path, 
@@ -290,7 +209,7 @@ async def get_models():
     """
     Возвращает список всех доступных моделей.
     """
-    models = get_available_models()
+    models = llm_state_manager.get_available_models()
     return models
 
 @router.get("/models/llm")
@@ -298,7 +217,7 @@ async def get_llm_models():
     """
     Возвращает список доступных моделей LLM.
     """
-    models = get_available_models()
+    models = llm_state_manager.get_available_models()
     return {"models": models["llm_models"]}
 
 @router.get("/models/embedding")
@@ -306,7 +225,7 @@ async def get_embedding_models():
     """
     Возвращает список доступных моделей эмбеддингов.
     """
-    models = get_available_models()
+    models = llm_state_manager.get_available_models()
     return {"models": models["embedding_models"]}
 
 @router.get("/initialized-departments")
@@ -314,7 +233,5 @@ async def get_initialized_departments():
     """
     Возвращает список отделов, для которых уже инициализированы модели LLM.
     """
-    # Используем глобальную блокировку для доступа к словарю department_chats
-    with global_lock:
-        departments = list(department_chats.keys())
+    departments = llm_state_manager.get_initialized_departments()
     return {"departments": departments}

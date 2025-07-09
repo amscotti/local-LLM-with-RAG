@@ -21,6 +21,9 @@ import sys
 from database import get_db
 
 from llm import getChatChain
+# Импортируем централизованный менеджер состояния ПЕРЕД роутерами
+from llm_state_manager import llm_state_manager
+
 from quiz import router as quiz_router
 from routes.directory_routes import router as directory_router  # Импортируйте ваш маршрутизатор
 from routes.llm_routes import router as llm_router  # Импортируйте ваш маршрутизатор
@@ -47,10 +50,6 @@ app.include_router(content_router)
 app.include_router(user_router)
 app.include_router(feedback_router)
 
-# Словари для хранения экземпляров чатов и баз данных для каждого отдела
-department_chats = {}  # {department_id: chat_instance}
-department_dbs = {}    # {department_id: db_instance}
-department_embedding_models = {}  # {department_id: embedding_model_instance}
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Настройки подключения к базе данных
@@ -69,38 +68,7 @@ class GenerateResponse(BaseModel):
     text: str
     model: str = "ilyagusev/saiga_llama3:latest"
 
-# Функция для проверки доступности модели
-def check_if_model_is_available(model_name: str):
-    # Список доступных моделей, можно расширить по необходимости
-    available_models = [
-        "ilyagusev/saiga_llama3:latest", 
-        "snowflake-arctic-embed2:latest", 
-
-    ]
-    
-    # Проверка доступности модели
-    if model_name not in available_models:
-        raise ValueError(f"Модель '{model_name}' недоступна. Доступные модели: {', '.join(available_models)}")
-    
-    return True
-
-# Функция для получения списка доступных моделей
-def get_available_models():
-    # Список моделей LLM
-    llm_models = [
-        "ilyagusev/saiga_llama3:latest", 
-
-    ]
-    
-    # Список моделей эмбеддингов
-    embedding_models = [
-        "snowflake-arctic-embed2:latest", 
-    ]
-    
-    return {
-        "llm_models": llm_models,
-        "embedding_models": embedding_models
-    }
+# Функции моделей теперь в LLMStateManager
 
 # Эндпоинт для парсинга аргументов
 @app.get("/parse-args")
@@ -128,41 +96,8 @@ async def check_db_connection():
         db.close()
 
 def initialize_llm(llm_model_name: str, embedding_model_name: str, documents_path: str, department_id: str, reload: bool = False) -> bool:
-    global department_chats, department_dbs, department_embedding_models
-    print(f"Инициализация LLM для отдела {department_id}...")  # Отладочное сообщение
-    try:
-        print("Проверка доступности LLM модели...")
-        check_if_model_is_available(llm_model_name)
-        print("Проверка доступности модели встраивания...")
-        check_if_model_is_available(embedding_model_name)
-    except Exception as e:
-        print(f"Ошибка при проверке доступности моделей: {e}")
-        return False
-
-    try:
-        print(f"Загрузка документов в базу данных для отдела {department_id}...")
-        department_db = load_documents_into_database(embedding_model_name, documents_path, department_id, reload=reload)
-        # Сохраняем базу данных для этого отдела
-        department_dbs[department_id] = department_db
-        # Инициализируем модель встраивания для векторного поиска
-        embedding_model = OllamaEmbeddings(model=embedding_model_name, base_url=OLLAMA_HOST)
-        department_embedding_models[department_id] = embedding_model
-        print(f"База данных для отдела {department_id} успешно инициализирована.")
-    except FileNotFoundError as e:
-        print(f"Ошибка при загрузке документов: {e}")
-        return False
-
-    try:
-        print("Создание LLM...")
-        llm = ChatOllama(model=llm_model_name, base_url=OLLAMA_HOST)
-        department_chat = getChatChain(llm, department_dbs[department_id])
-        department_chats[department_id] = department_chat
-        print(f"LLM для отдела {department_id} успешно инициализирован.")
-    except Exception as e:
-        print(f"Ошибка при создании LLM: {e}")
-        return False
-
-    return True
+    """Делегируем инициализацию централизованному менеджеру состояния"""
+    return llm_state_manager.initialize_llm(llm_model_name, embedding_model_name, documents_path, department_id, reload)
 
 def main(llm_model_name: str, embedding_model_name: str, documents_path: str, department_id: str = "default", web_mode: bool = False, port: int = 8000) -> None:
     print("Запуск функции main...")  # Отладочное сообщение
@@ -195,7 +130,11 @@ def main(llm_model_name: str, embedding_model_name: str, documents_path: str, de
                 if user_input.lower() == "exit":
                     break
                 else:
-                    department_chats[department_id](user_input)
+                    chat_instance = llm_state_manager.get_department_chat(department_id)
+                    if chat_instance:
+                        chat_instance(user_input)
+                    else:
+                        print(f"Чат для отдела {department_id} не инициализирован")
             
             except KeyboardInterrupt:
                 break
@@ -372,7 +311,7 @@ async def get_initialized_departments():
     """
     Возвращает список отделов, для которых уже инициализированы модели LLM.
     """
-    departments = list(department_chats.keys())
+    departments = llm_state_manager.get_initialized_departments()
     return {"departments": departments}
 
 @app.get("/search-documents")
@@ -451,4 +390,4 @@ async def search_documents(
 
 if __name__ == "__main__":
     args = parse_arguments()
-    main(args.model, args.embedding_model, args.path, args.web, args.port)
+    main(args.model, args.embedding_model, args.path, args.department, args.web, args.port)
