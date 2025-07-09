@@ -74,13 +74,7 @@
           </template>
         </sidenav-collapse>
       </li>
-      <li class="nav-item">
-        <sidenav-collapse nav-text="Вход" :to="{ name: 'Sign In' }">
-          <template #icon>
-            <icon name="sign-in" />
-          </template>
-        </sidenav-collapse>
-      </li>
+
       <!-- <li class="nav-item">
         <sidenav-collapse nav-text="Регистрация" :to="{ name: 'Sign Up' }">
           <template #icon>
