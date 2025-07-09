@@ -22,7 +22,10 @@ from database import get_db
 
 from llm import getChatChain
 # Импортируем централизованный менеджер состояния ПЕРЕД роутерами
-from llm_state_manager import llm_state_manager
+from llm_state_manager import get_llm_state_manager
+
+# Получаем единственный экземпляр менеджера
+llm_state_manager = get_llm_state_manager()
 
 from quiz import router as quiz_router
 from routes.directory_routes import router as directory_router  # Импортируйте ваш маршрутизатор

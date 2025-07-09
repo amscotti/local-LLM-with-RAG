@@ -151,36 +151,101 @@ export default {
       this.userMessage = "";
       this.isLoading = true;
       
-      // Устанавливаем таймаут для запроса (30 секунд)
+      // Устанавливаем таймаут для запроса (2 минуты)
       this.requestTimeout = setTimeout(() => {
         if (this.isLoading) {
           this.isLoading = false;
           this.requestInProgress = false;
           this.chatMessages.push({
             role: 'assistant',
-            content: 'Запрос занял слишком много времени и был отменен. Пожалуйста, попробуйте еще раз или переформулируйте вопрос.'
+            content: '⏱️ Обработка запроса занимает больше времени, чем ожидалось. Запрос продолжает обрабатываться на сервере, ответ может прийти позже.'
           });
         }
-      }, 30000);
+      }, 120000);
       
       try {
         let response;
         
         if (this.chatMode === "rag") {
-          // Используем эндпоинт /query для режима с RAG
-          response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/query`, { 
+          // Создаем задачу для обработки в режиме с RAG (новый асинхронный API)
+          const taskResponse = await axios.post(`${import.meta.env.VITE_API_URL}/llm/query`, { 
             question: message,
-            department_id: departmentId // Добавляем department_id в запрос
+            department_id: departmentId
           }, {
-            // Отключаем автоматические повторные попытки для запросов к LLM
             noRetry: true
           });
           
-          // Добавляем ответ в чат
+          const taskId = taskResponse.data.task_id;
+          console.log(`Создана задача: ${taskId}`);
+          
+          // Добавляем временное сообщение о статусе
+          const processingMessageIndex = this.chatMessages.length;
           this.chatMessages.push({
             role: 'assistant',
-            content: response.data.answer
+            content: '🔄 Обрабатываю ваш запрос...',
+            isProcessing: true
           });
+          
+          // Опрашиваем статус задачи до завершения
+          let maxAttempts = 60; // Максимум 60 попыток (2 минуты)
+          let attempts = 0;
+          
+          while (attempts < maxAttempts) {
+            attempts++;
+            
+            try {
+              const resultResponse = await axios.get(`${import.meta.env.VITE_API_URL}/llm/query/${taskId}`);
+              const taskResult = resultResponse.data;
+              
+              if (taskResult.status === 'completed') {
+                // Задача завершена успешно
+                this.chatMessages[processingMessageIndex] = {
+                  role: 'assistant',
+                  content: taskResult.answer || 'Ответ получен, но содержимое пустое.',
+                  isProcessing: false
+                };
+                break;
+              } else if (taskResult.status === 'failed') {
+                // Задача завершена с ошибкой
+                this.chatMessages[processingMessageIndex] = {
+                  role: 'assistant',
+                  content: `❌ Произошла ошибка при обработке: ${taskResult.error || 'Неизвестная ошибка'}`,
+                  isProcessing: false
+                };
+                break;
+              } else if (taskResult.status === 'processing') {
+                // Задача в обработке, обновляем сообщение
+                this.chatMessages[processingMessageIndex].content = '⚙️ Запрос обрабатывается, пожалуйста подождите...';
+              }
+              
+              // Ждем 2 секунды перед следующей попыткой
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+            } catch (pollError) {
+              console.error("Ошибка при опросе статуса задачи:", pollError);
+              
+              // Если опрос статуса не удался несколько раз подряд
+              if (attempts >= 3) {
+                this.chatMessages[processingMessageIndex] = {
+                  role: 'assistant',
+                  content: `❌ Не удалось получить результат обработки. Попробуйте еще раз.`,
+                  isProcessing: false
+                };
+                break;
+              }
+              
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          }
+          
+          // Если превышено максимальное количество попыток
+          if (attempts >= maxAttempts) {
+            this.chatMessages[processingMessageIndex] = {
+              role: 'assistant',
+              content: '⏱️ Обработка запроса занимает больше времени, чем ожидалось. Попробуйте позже.',
+              isProcessing: false
+            };
+          }
         } else {
           // Используем эндпоинт /generate для простого чата
           response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/generate`, {

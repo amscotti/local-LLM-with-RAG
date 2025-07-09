@@ -1,4 +1,7 @@
 from operator import itemgetter
+import asyncio
+import concurrent.futures
+from typing import Dict, Any
 
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.memory import ConversationBufferMemory
@@ -46,6 +49,9 @@ DEFAULT_DOCUMENT_PROMPT = PromptTemplate.from_template(
     template="📄 Источник: {source} (страница {page})\n📝 Содержание:\n{page_content}\n"
 )
 
+# Создаем общий пул потоков для CPU-bound операций
+_thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+
 
 def _combine_documents(
     docs, document_prompt=DEFAULT_DOCUMENT_PROMPT, document_separator="\n" + "="*50 + "\n"
@@ -79,6 +85,20 @@ def _combine_documents(
     result = document_separator.join(doc_strings)
     print(f"Объединено {len(doc_strings)} документов в контекст размером {len(result)} символов")
     return result
+
+
+def _sync_chat_invoke(final_chain, inputs):
+    """Синхронная функция для выполнения цепочки LLM"""
+    return final_chain.invoke(inputs)
+
+
+async def _async_chat_invoke(final_chain, inputs, timeout: int = 100):
+    """Асинхронная обертка для выполнения LLM цепочки в отдельном потоке с тайм-аутом"""
+    loop = asyncio.get_event_loop()
+    return await asyncio.wait_for(
+        loop.run_in_executor(_thread_pool, _sync_chat_invoke, final_chain, inputs),
+        timeout=timeout
+    )
 
 
 def getStreamingChain(question: str, memory, llm, db):
@@ -119,11 +139,12 @@ def getStreamingChain(question: str, memory, llm, db):
 
 
 def getChatChain(llm, db):
+    """Синхронная версия для обратной совместимости"""
     # Улучшенные настройки retriever для лучшего качества RAG
     retriever = db.as_retriever(
         search_type="similarity",
         search_kwargs={
-            "k": 15,  # Увеличиваем количество документов
+            "k": 8,  # Оптимальное количество для баланса качества и скорости
         }
     )
 
@@ -189,3 +210,109 @@ def getChatChain(llm, db):
             return f"Произошла ошибка при обработке запроса: {str(e)}"
 
     return chat
+
+
+def getAsyncChatChain(llm, db):
+    """Асинхронная версия для параллельной обработки"""
+    # Улучшенные настройки retriever для лучшего качества RAG
+    retriever = db.as_retriever(
+        search_type="similarity",
+        search_kwargs={
+            "k": 8,  # Оптимальное количество для баланса качества и скорости
+        }
+    )
+
+    async def async_chat(question: str) -> Dict[str, Any]:
+        # Инициализация памяти для каждого запроса
+        memory = ConversationBufferMemory(return_messages=True, output_key="answer", input_key="question")
+        
+        loaded_memory = RunnablePassthrough.assign(
+            chat_history=RunnableLambda(memory.load_memory_variables)
+            | itemgetter("history"),
+        )
+
+        standalone_question = {
+            "standalone_question": {
+                "question": lambda x: x["question"],
+                "chat_history": lambda x: get_buffer_string(x["chat_history"]),
+            }
+            | CONDENSE_QUESTION_PROMPT
+            | llm
+            | (lambda x: x.content if hasattr(x, "content") else x)
+        }
+
+        # Теперь мы извлекаем документы
+        retrieved_documents = {
+            "docs": itemgetter("standalone_question") | retriever,
+            "question": lambda x: x["standalone_question"],
+        }
+
+        # Теперь мы строим входные данные для финального запроса
+        final_inputs = {
+            "context": lambda x: _combine_documents(x["docs"]),
+            "question": itemgetter("question"),
+        }
+
+        # И, наконец, мы делаем часть, которая возвращает ответы
+        answer = {
+            "answer": final_inputs
+            | ANSWER_PROMPT
+            | llm,  # Убираем StreamingStdOutCallbackHandler для асинхронной версии
+            "docs": itemgetter("docs"),
+        }
+
+        final_chain = loaded_memory | standalone_question | retrieved_documents | answer
+
+        try:
+            print(f"getAsyncChatChain: обработка вопроса: {question}")
+            inputs = {"question": question}
+            
+            # Выполняем LLM цепочку асинхронно в отдельном потоке с тайм-аутом
+            result = await _async_chat_invoke(final_chain, inputs, timeout=100)
+            
+            if "answer" not in result:
+                print("getAsyncChatChain: ключ 'answer' отсутствует в результате")
+                return {
+                    "answer": "Не удалось получить ответ от модели",
+                    "docs": [],
+                    "success": False
+                }
+                
+            answer_content = result["answer"].content if hasattr(result["answer"], "content") else result["answer"]
+            
+            # Сохраняем контекст в память (синхронно)
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(_thread_pool, memory.save_context, inputs, {"answer": answer_content})
+            
+            print(f"getAsyncChatChain: успешный ответ: {answer_content[:100]}...")
+            
+            # Извлекаем документы из результата
+            docs = result.get("docs", [])
+            doc_contents = []
+            doc_sources = []
+            
+            for doc in docs:
+                if hasattr(doc, 'page_content'):
+                    doc_contents.append(doc.page_content)
+                if hasattr(doc, 'metadata') and doc.metadata.get('source'):
+                    doc_sources.append(doc.metadata['source'])
+            
+            return {
+                "answer": answer_content,
+                "chunks": doc_contents,
+                "files": list(set(doc_sources)),  # Убираем дубликаты
+                "success": True
+            }
+            
+        except Exception as e:
+            import traceback
+            print(f"getAsyncChatChain: ошибка при обработке вопроса: {str(e)}")
+            print(traceback.format_exc())
+            return {
+                "answer": f"Произошла ошибка при обработке запроса: {str(e)}",
+                "chunks": [],
+                "files": [],
+                "success": False
+            }
+
+    return async_chat

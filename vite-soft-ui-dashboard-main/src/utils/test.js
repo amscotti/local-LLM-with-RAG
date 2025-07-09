@@ -138,7 +138,7 @@ export default function() {
         department_id: 1
       };
       
-      const chatResponse = testEndpoint(token, '/llm/query', 'POST', chatData);
+      const chatResponse = testEndpoint(token, '/llm/query-sync', 'POST', chatData);
       
       if (chatResponse.status === 200) {
         check(chatResponse, {

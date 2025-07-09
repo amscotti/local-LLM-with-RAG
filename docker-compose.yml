@@ -31,8 +31,6 @@ services:
       - DATABASE_URL=mysql+mysqlconnector://root:${MYSQL_ROOT_PASSWORD:-123123}@db:3306/${MYSQL_DATABASE:-db}
       - DEBUG=${DEBUG:-False}
       - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_NUM_PARALLEL=4
-      - OLLAMA_MAX_QUEUE=200
     depends_on:
       db:
         condition: service_healthy
@@ -86,6 +84,15 @@ services:
     image: ollama/ollama:latest
     ports:
       - "11434:11434"
+    environment:
+      # БАЛАНС стабильности и производительности Ollama
+      - OLLAMA_NUM_PARALLEL=2  # Embedding + генерация параллельно
+      - OLLAMA_MAX_LOADED_MODELS=2  # 2 модели в памяти (embedding + LLM)
+      - OLLAMA_FLASH_ATTENTION=true  # Оптимизация памяти
+      - OLLAMA_KV_CACHE_TYPE=q4_0  # Экономия VRAM
+      - OLLAMA_MAX_QUEUE=20  # Увеличиваем очередь для 2 типов запросов
+      - CUDA_VISIBLE_DEVICES=0  # Только 1 GPU
+      - OLLAMA_SCHEDULE_TIMEOUT=60s  # Быстрее переключение
     deploy:
       resources:
         reservations:

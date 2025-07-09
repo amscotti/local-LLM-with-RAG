@@ -154,7 +154,7 @@ function sendChatRequest(token) {
     department_id: "1" // Предполагаем, что это валидный ID отдела
   };
   
-  const chatResponse = testEndpoint(token, '/llm/query', 'POST', chatData);
+  const chatResponse = testEndpoint(token, '/llm/query-sync', 'POST', chatData);
   
   if (chatResponse.status === 200) {
     check(chatResponse, {
