@@ -1,9 +1,9 @@
 <template>
   <div
     id="sidenav-collapse-main"
-    class="w-auto h-auto collapse navbar-collapse max-height-vh-100 h-100"
+    class="w-300 h-auto collapse navbar-collapse max-height-vh-100 h-100"
   >
-    <ul class="navbar-nav">
+    <ul class="navbar-nav bg-white rounded-3 border border-1 border-gray-300">
       <li class="nav-item">
         <sidenav-collapse nav-text="Главная" :to="{ name: 'Dashboard' }">
           <template #icon>
