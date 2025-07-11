@@ -12,7 +12,7 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE:-db}
     volumes:  
       - db_data:/var/lib/mysql
-      - ./backup_file2.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backup4.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-123123}"]
       interval: 10s
