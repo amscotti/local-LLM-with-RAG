@@ -140,4 +140,4 @@ content_files
 
 
 #backup
-backup/
+.backup
