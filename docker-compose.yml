@@ -1,16 +1,18 @@
+# ВЕРСИЯ 0.0.1
 version: '3.8'
 
 services:
   db:
     image: mysql:8.0
     ports:
+    # подключение к `docker` в workbench
       - "3307:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123123}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-db}
     volumes:  
       - db_data:/var/lib/mysql
-      - ./backup_file2.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backup4.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-123123}"]
       interval: 10s
@@ -28,12 +30,15 @@ services:
     environment:
       - DATABASE_URL=mysql+mysqlconnector://root:${MYSQL_ROOT_PASSWORD:-123123}@db:3306/${MYSQL_DATABASE:-db}
       - DEBUG=${DEBUG:-False}
+      - OLLAMA_HOST=http://ollama:11434
     depends_on:
       db:
         condition: service_healthy
-    command: ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--limit-concurrency", "100", "--backlog", "2048"]
+    command: ["python", "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "25", "--limit-concurrency", "100", "--backlog", "2048"]
     networks:
       - app-network
+    volumes:
+      - files_storage:/app/files
 
   frontend:
     build:
@@ -75,9 +80,52 @@ services:
     networks:
       - app-network
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    environment:
+      # БАЛАНС стабильности и производительности Ollama
+      - OLLAMA_NUM_PARALLEL=2  # Embedding + генерация параллельно
+      - OLLAMA_MAX_LOADED_MODELS=2  # 2 модели в памяти (embedding + LLM)
+      - OLLAMA_FLASH_ATTENTION=true  # Оптимизация памяти
+      - OLLAMA_KV_CACHE_TYPE=q4_0  # Экономия VRAM
+      - OLLAMA_MAX_QUEUE=20  # Увеличиваем очередь для 2 типов запросов
+      - CUDA_VISIBLE_DEVICES=0  # Только 1 GPU
+      - OLLAMA_SCHEDULE_TIMEOUT=60s  # Быстрее переключение
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"  # Порт для подключения к RabbitMQ
+      - "15672:15672"  # Порт для веб-интерфейса управления
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - app-network
+
 volumes:
   db_data:
+  rabbitmq_data:
+  files_storage:
+  ollama_data:
 
 networks:
   app-network:
     driver: bridge
+
+

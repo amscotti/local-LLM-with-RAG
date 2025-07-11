@@ -1,3 +1,4 @@
+# ВЕРСИЯ 0.0.1
 FROM node:18-alpine as build
 
 WORKDIR /app

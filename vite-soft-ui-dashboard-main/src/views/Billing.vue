@@ -89,7 +89,10 @@ export default {
       userMessage: "",
       chatMessages: [],
       isLoading: false,
-      chatMode: "rag" // По умолчанию используем режим с RAG
+      chatMode: "rag", // По умолчанию используем режим с RAG
+      requestInProgress: false, // Флаг для отслеживания текущего запроса
+      requestTimeout: null, // Таймер для отмены запроса
+      lastRequestTime: 0 // Время последнего запроса
     };
   },
   methods: {
@@ -101,17 +104,35 @@ export default {
     async sendMessage() {
       if (!this.userMessage.trim()) return;
       
+      // Защита от слишком частых запросов
+      const now = Date.now();
+      if (now - this.lastRequestTime < 1000) { // Минимальный интервал между запросами - 1 секунда
+        console.warn("Запросы отправляются слишком часто. Пожалуйста, подождите.");
+        return;
+      }
+      
+      // Защита от повторных запросов
+      if (this.requestInProgress) {
+        console.warn("Предыдущий запрос еще обрабатывается. Пожалуйста, подождите.");
+        return;
+      }
+      
+      this.lastRequestTime = now;
+      this.requestInProgress = true;
+      
       const userId = localStorage.getItem("userId");
       const departmentId = localStorage.getItem("departmentId");
       const isAuthenticated = localStorage.getItem("isAuthenticated");
       
       if (!isAuthenticated || isAuthenticated !== "true") {
         console.error("Пользователь не аутентифицирован.");
+        this.requestInProgress = false;
         return; // Прекращаем выполнение, если пользователь не аутентифицирован
       }
       
       if (!departmentId) {
         console.error("department_id не найден. Убедитесь, что пользователь вошел в систему.");
+        this.requestInProgress = false;
         return; // Прекращаем выполнение, если departmentId отсутствует
       }
       
@@ -130,26 +151,109 @@ export default {
       this.userMessage = "";
       this.isLoading = true;
       
+      // Устанавливаем таймаут для запроса (2 минуты)
+      this.requestTimeout = setTimeout(() => {
+        if (this.isLoading) {
+          this.isLoading = false;
+          this.requestInProgress = false;
+          this.chatMessages.push({
+            role: 'assistant',
+            content: '⏱️ Обработка запроса занимает больше времени, чем ожидалось. Запрос продолжает обрабатываться на сервере, ответ может прийти позже.'
+          });
+        }
+      }, 120000);
+      
       try {
         let response;
         
         if (this.chatMode === "rag") {
-          // Используем эндпоинт /query для режима с RAG
-          response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/query`, { 
+          // Создаем задачу для обработки в режиме с RAG (новый асинхронный API)
+          const taskResponse = await axios.post(`${import.meta.env.VITE_API_URL}/llm/query`, { 
             question: message,
-            department_id: departmentId // Добавляем department_id в запрос
+            department_id: departmentId
+          }, {
+            noRetry: true
           });
           
-          // Добавляем ответ в чат
+          const taskId = taskResponse.data.task_id;
+          console.log(`Создана задача: ${taskId}`);
+          
+          // Добавляем временное сообщение о статусе
+          const processingMessageIndex = this.chatMessages.length;
           this.chatMessages.push({
             role: 'assistant',
-            content: response.data.answer
+            content: '🔄 Обрабатываю ваш запрос...',
+            isProcessing: true
           });
+          
+          // Опрашиваем статус задачи до завершения
+          let maxAttempts = 60; // Максимум 60 попыток (2 минуты)
+          let attempts = 0;
+          
+          while (attempts < maxAttempts) {
+            attempts++;
+            
+            try {
+              const resultResponse = await axios.get(`${import.meta.env.VITE_API_URL}/llm/query/${taskId}`);
+              const taskResult = resultResponse.data;
+              
+              if (taskResult.status === 'completed') {
+                // Задача завершена успешно
+                this.chatMessages[processingMessageIndex] = {
+                  role: 'assistant',
+                  content: taskResult.answer || 'Ответ получен, но содержимое пустое.',
+                  isProcessing: false
+                };
+                break;
+              } else if (taskResult.status === 'failed') {
+                // Задача завершена с ошибкой
+                this.chatMessages[processingMessageIndex] = {
+                  role: 'assistant',
+                  content: `❌ Произошла ошибка при обработке: ${taskResult.error || 'Неизвестная ошибка'}`,
+                  isProcessing: false
+                };
+                break;
+              } else if (taskResult.status === 'processing') {
+                // Задача в обработке, обновляем сообщение
+                this.chatMessages[processingMessageIndex].content = '⚙️ Запрос обрабатывается, пожалуйста подождите...';
+              }
+              
+              // Ждем 2 секунды перед следующей попыткой
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              
+            } catch (pollError) {
+              console.error("Ошибка при опросе статуса задачи:", pollError);
+              
+              // Если опрос статуса не удался несколько раз подряд
+              if (attempts >= 3) {
+                this.chatMessages[processingMessageIndex] = {
+                  role: 'assistant',
+                  content: `❌ Не удалось получить результат обработки. Попробуйте еще раз.`,
+                  isProcessing: false
+                };
+                break;
+              }
+              
+              await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+          }
+          
+          // Если превышено максимальное количество попыток
+          if (attempts >= maxAttempts) {
+            this.chatMessages[processingMessageIndex] = {
+              role: 'assistant',
+              content: '⏱️ Обработка запроса занимает больше времени, чем ожидалось. Попробуйте позже.',
+              isProcessing: false
+            };
+          }
         } else {
           // Используем эндпоинт /generate для простого чата
           response = await axios.post(`${import.meta.env.VITE_API_URL}/llm/generate`, {
             messages: message,
             department_id: departmentId // Добавляем department_id в запрос
+          }, {
+            // Отключаем автоматические повторные попытки для запросов к LLM
+            noRetry: true
           });
           
           // Добавляем ответ в чат
@@ -167,7 +271,15 @@ export default {
           content: `Произошла ошибка: ${error.response?.data?.detail || error.message || 'Неизвестная ошибка'}`
         });
       } finally {
+        // Очищаем таймаут
+        if (this.requestTimeout) {
+          clearTimeout(this.requestTimeout);
+          this.requestTimeout = null;
+        }
+        
         this.isLoading = false;
+        this.requestInProgress = false;
+        
         // Прокручиваем чат вниз
         this.$nextTick(() => {
           const chatContainer = document.querySelector('.chat-container');

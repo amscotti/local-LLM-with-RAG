@@ -29,10 +29,11 @@ class QuestionResponse(BaseModel):
     text: str
     question_type: str
     options: Optional[List[Dict[str, Any]]] = None
+    correct_answer: Optional[Any] = None
     order: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class QuizCreate(BaseModel):
     title: str
@@ -53,7 +54,7 @@ class QuizResponse(BaseModel):
     questions: List[QuestionResponse]
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class QuizListItem(BaseModel):
     id: int
@@ -66,7 +67,7 @@ class QuizListItem(BaseModel):
     question_count: int
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class UserAnswerCreate(BaseModel):
     question_id: int
@@ -83,7 +84,7 @@ class UserAnswerResponse(BaseModel):
     is_correct: Optional[bool] = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class AttemptResponse(BaseModel):
     id: int
@@ -95,7 +96,7 @@ class AttemptResponse(BaseModel):
     answers: List[UserAnswerResponse]
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class AttemptListItem(BaseModel):
     id: int
@@ -108,7 +109,7 @@ class AttemptListItem(BaseModel):
     correct_answers: Optional[int] = None
     
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Функции для работы с тестами и анкетами
 
@@ -219,6 +220,7 @@ def create_quiz(quiz_data: QuizCreate, db: Session = Depends(get_db)):
                 text=q.text,
                 question_type=q.question_type,
                 options=q.options,
+                correct_answer=q.correct_answer,
                 order=q.order
             ) for q in questions
         ]
@@ -309,6 +311,7 @@ def get_quiz(quiz_id: int, user_id: int, db: Session = Depends(get_db)):
                 text=q.text,
                 question_type=q.question_type,
                 options=q.options,
+                correct_answer=q.correct_answer,
                 order=q.order
             ) for q in questions
         ]

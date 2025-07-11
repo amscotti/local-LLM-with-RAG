@@ -67,7 +67,7 @@ class ContentBase(BaseModel):
     file_path: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Модели для системы тестирования и анкетирования
 class Quiz(Base):

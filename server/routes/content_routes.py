@@ -1,27 +1,55 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Depends, Form
 import os
 from sqlalchemy.orm import Session
 from database import get_db
 from models_db import Access, Content, User, Tag
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
+from typing import List
 
 
 router = APIRouter(prefix="/content", tags=["content"])
 
-# Эндпоинт для загрузки файлов
-@router.post("/upload-file")
-async def upload_file(file: UploadFile = File(...)):
-    # Проверка на уникальность имени файла
-    if file.filename in os.listdir("Research"):  # Предполагается, что "Research" - это папка для хранения файлов
-        return {"message": "Файл с таким именем уже существует."}
+# # Эндпоинт для загрузки файлов
+# @router.post("/upload-file")
+# async def upload_file(
+#     file: UploadFile = File(...),
+#     directory: str = ""  # Добавляем параметр для указания поддиректории
+# ):
+#     # Создаем базовую директорию /app/files/, если она не существует
+#     os.makedirs("/app/files/", exist_ok=True)
+    
+#     # Формируем путь к директории для сохранения файла
+#     if directory:
+#         # Убираем начальный и конечный слеши, если они есть
+#         directory = directory.strip('/')
+        
+#         # Проверяем, начинается ли путь с /app/files/
+#         if directory.startswith('/app/files/'):
+#             target_dir = directory
+#         else:
+#             target_dir = f"/app/files/{directory}"
+            
+#         # Создаем директорию, если она не существует
+#         os.makedirs(target_dir, exist_ok=True)
+        
+#         # Формируем полный путь к файлу
+#         file_location = f"{target_dir}/{file.filename}"
+#     else:
+#         # Если директория не указана, сохраняем в корневую директорию /app/files/
+#         file_location = f"/app/files/{file.filename}"
+    
+#     # Проверка на уникальность имени файла
+#     if os.path.exists(file_location):
+#         return {"message": f"Файл с таким именем уже существует в {os.path.dirname(file_location)}."}
 
-    # Сохранение файла
-    file_location = f"Research/{file.filename}"
-    with open(file_location, "wb") as f:
-        f.write(await file.read())
-
-    return {"message": f"Файл '{file.filename}' успешно загружен."}
+#     # Сохранение файла в указанную директорию
+#     try:
+#         with open(file_location, "wb") as f:
+#             f.write(await file.read())
+#         return {"message": f"Файл '{file.filename}' успешно загружен в {os.path.dirname(file_location)}."}
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Ошибка при сохранении файла: {str(e)}")
 
 @router.post("/upload-content")
 async def upload_content(
@@ -29,15 +57,40 @@ async def upload_content(
     description: str,
     access_id: int,
     department_id: int,
-    directory_path: str,
     file: UploadFile = File(...),
     tag_id: int = None,
+    user_id: int = None,
+    directory: str = "",  # Добавляем параметр для указания поддиректории
     db: Session = Depends(get_db)
 ):
-    # Сохранение файла на сервере в указанной директории
-    file_location = f"{directory_path}/{file.filename}"  # Используем указанный путь
-    with open(file_location, "wb") as f:
-        f.write(await file.read())
+    # Создаем базовую директорию /app/files/, если она не существует
+    os.makedirs("/app/files/", exist_ok=True)
+    
+    # Формируем путь к директории для сохранения файла
+    if directory:
+        # Убираем начальный и конечный слеши, если они есть
+        directory = directory.strip('/')
+        
+        # Проверяем, начинается ли путь с /app/files/
+        if directory.startswith('/app/files/'):
+            target_dir = directory
+        else:
+            target_dir = f"/app/files/{directory}"
+            
+        # Создаем директорию, если она не существует
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # Формируем полный путь к файлу
+        file_location = f"{target_dir}/{file.filename}"
+    else:
+        # Если директория не указана, сохраняем в корневую директорию /app/files/
+        file_location = f"/app/files/{file.filename}"
+    
+    try:
+        with open(file_location, "wb") as f:
+            f.write(await file.read())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка при сохранении файла: {str(e)}")
 
     # Проверка существования уровня доступа
     access = db.query(Access).filter(Access.id == access_id).first()
@@ -57,7 +110,70 @@ async def upload_content(
     db.commit()
     db.refresh(new_content)
 
-    return {"message": "Контент успешно загружен"}
+    return {"message": f"Контент успешно загружен в {file_location}"}
+
+@router.post("/upload-files")
+async def upload_files(
+    files: List[UploadFile] = File(...),
+    directory: str = "",  # Параметр для указания поддиректории
+    access_level: int = 1,
+    department_id: int = 1,
+    db: Session = Depends(get_db)
+):
+    # Базовая директория для всех файлов
+    base_dir = "/app/files"
+    os.makedirs(base_dir, exist_ok=True)
+    
+    # Формируем путь к поддиректории
+    if directory:
+        # Очищаем путь от начальных и конечных слешей
+        clean_directory = directory.strip('/')
+        
+        # Создаем полный путь внутри базовой директории
+        target_dir = os.path.join(base_dir, clean_directory)
+        
+        # Создаем все необходимые поддиректории
+        os.makedirs(target_dir, exist_ok=True)
+    else:
+        # Если директория не указана, используем базовую
+        target_dir = base_dir
+    
+    # Список для хранения информации о загруженных файлах
+    uploaded_files_info = []
+
+    for file in files:
+        # Сохранение файла в указанной директории
+        file_location = os.path.join(target_dir, file.filename)
+        
+        try:
+            with open(file_location, "wb") as f:
+                f.write(await file.read())
+            
+            # Сохраняем относительный путь в БД (относительно /app/files/)
+            relative_path = os.path.relpath(file_location, base_dir)
+            db_file_path = os.path.join(base_dir, relative_path)
+            
+            # Добавление информации о файле в базу данных
+            new_content = Content(
+                title=file.filename,
+                description="Загруженный файл",
+                file_path=db_file_path,  # Сохраняем полный путь
+                access_level=access_level,
+                department_id=department_id,
+                tag_id=None
+            )
+            db.add(new_content)
+            db.commit()
+            db.refresh(new_content)
+
+            uploaded_files_info.append({
+                "filename": file.filename,
+                "file_path": db_file_path
+            })
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Ошибка при сохранении файла {file.filename}: {str(e)}")
+
+    return {"message": f"Файлы успешно загружены в {target_dir}", "files": uploaded_files_info}
 
 # Модель для обновления контента
 class ContentUpdate(BaseModel):
@@ -109,7 +225,7 @@ class ContentBase(BaseModel):
     file_path: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 @router.get("/content/filter")
 async def get_content_by_access_and_department(
@@ -223,7 +339,16 @@ async def download_file(content_id: int, db: Session = Depends(get_db)):
     # Проверяем, существует ли файл
     file_path = content.file_path
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Файл не найден")
+        # Если файл не найден по абсолютному пути, проверяем, может быть это старый путь
+        # и нужно добавить префикс /app/files/
+        if not file_path.startswith('/app/files/'):
+            new_path = f"/app/files/{os.path.basename(file_path)}"
+            if os.path.exists(new_path):
+                file_path = new_path
+            else:
+                raise HTTPException(status_code=404, detail="Файл не найден")
+        else:
+            raise HTTPException(status_code=404, detail="Файл не найден")
 
     # Возвращаем файл как ответ
     return FileResponse(file_path, media_type='application/octet-stream', filename=os.path.basename(file_path))
@@ -238,7 +363,16 @@ async def view_file(content_id: int, db: Session = Depends(get_db)):
     # Проверяем, существует ли файл
     file_path = content.file_path
     if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Файл не найден")
+        # Если файл не найден по абсолютному пути, проверяем, может быть это старый путь
+        # и нужно добавить префикс /app/files/
+        if not file_path.startswith('/app/files/'):
+            new_path = f"/app/files/{os.path.basename(file_path)}"
+            if os.path.exists(new_path):
+                file_path = new_path
+            else:
+                raise HTTPException(status_code=404, detail="Файл не найден")
+        else:
+            raise HTTPException(status_code=404, detail="Файл не найден")
 
     # Определяем тип файла на основе расширения
     file_extension = os.path.splitext(file_path)[1].lower()

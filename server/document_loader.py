@@ -9,36 +9,155 @@ from langchain_core.documents import Document
 from langchain_ollama import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+import time
+import concurrent.futures
+import threading
 
-PERSIST_DIRECTORY = "storage"
-TEXT_SPLITTER = RecursiveCharacterTextSplitter(chunk_size=863, chunk_overlap=324)
+# Изменяем директорию для хранения данных на /app/files/storage
+PERSIST_DIRECTORY = "/app/files/storage"
+# Улучшенные параметры для лучшего качества RAG
+TEXT_SPLITTER = RecursiveCharacterTextSplitter(
+    chunk_size=1500,  # Увеличиваем размер чанка для лучшего контекста
+    chunk_overlap=200,  # Оптимизируем перекрытие
+    length_function=len,
+    separators=["\n\n", "\n", ". ", " ", ""]  # Более точные разделители
+)
 # Получение URL для Ollama из переменной окружения или использование значения по умолчанию
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
-def vec_search(embedding_model, query, db, n_top_cos: int = 5):
+def vec_search(embedding_model, query, db, n_top_cos: int = 10, timeout: int = 20):
     """
-    Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
+    Улучшенный поиск в векторной базе Chroma с множественными стратегиями поиска.
     
     Args:
         embedding_model: Модель для создания эмбеддингов
         query (str): Текст запроса
         db: Векторная база данных
         n_top_cos (int): Количество результатов для возврата
+        timeout (int): Таймаут в секундах для операции поиска
         
     Returns:
         tuple: Кортеж из двух списков - топ-фрагменты и топ-файлы
     """
-    # Кодируем запрос в вектор
-    query_emb = embedding_model.embed_documents([query])[0]
-
-    # Поиск в базе данных
-    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
-
-    # Извлечение фрагментов и файлов из метаданных
-    top_chunks = [x.page_content for x in search_result]
-    top_files = list({x.metadata.get('source') for x in search_result if x.metadata.get('source')})
-
-    return top_chunks, top_files
+    start_time = time.time()
+    result = []
+    error = None
+    
+    def enhance_query(original_query: str) -> List[str]:
+        """Генерирует дополнительные варианты запроса для лучшего поиска"""
+        queries = [original_query]
+        
+        # Добавляем ключевые слова
+        words = original_query.lower().split()
+        if len(words) > 1:
+            # Добавляем отдельные ключевые слова
+            for word in words:
+                if len(word) > 3:  # Игнорируем короткие слова
+                    queries.append(word)
+        
+        # Добавляем варианты без вопросительных слов
+        question_words = ['что', 'как', 'где', 'когда', 'почему', 'какой', 'кто']
+        filtered_query = ' '.join([word for word in words if word not in question_words])
+        if filtered_query and filtered_query != original_query:
+            queries.append(filtered_query)
+        
+        return queries[:2]  # Оптимизация: только 2 варианта вместо 3
+    
+    # Функция для выполнения поиска в отдельном потоке
+    def search_task():
+        nonlocal result, error
+        try:
+            print(f"Начало улучшенного поиска для запроса: {query[:50]}...")
+            
+            # Генерируем варианты запроса
+            query_variants = enhance_query(query)
+            print(f"Сгенерировано {len(query_variants)} вариантов запроса")
+            
+            all_results = []
+            seen_content = set()
+            
+            for i, q in enumerate(query_variants):
+                print(f"Поиск по варианту {i+1}: {q[:30]}...")
+                
+                # Кодируем запрос в вектор
+                query_emb = embedding_model.embed_documents([q])[0]
+                
+                # Оптимизированный поиск - только один быстрый метод
+                try:
+                    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
+                    for doc in search_result:
+                        content = doc.page_content if hasattr(doc, 'page_content') else str(doc)
+                        # Избегаем дубликатов по содержимому
+                        content_hash = hash(content[:100])  # Используем первые 100 символов для хеша
+                        if content_hash not in seen_content:
+                            seen_content.add(content_hash)
+                            all_results.append(doc)
+                except Exception as method_error:
+                    print(f"Ошибка в поиске: {method_error}")
+                    continue
+            
+            # Сортируем результаты и берем топ
+            if len(all_results) > n_top_cos:
+                # Простая сортировка по длине - более длинные фрагменты часто содержат больше контекста
+                all_results.sort(key=lambda x: len(x.page_content) if hasattr(x, 'page_content') else 0, reverse=True)
+                all_results = all_results[:n_top_cos]
+            
+            print(f"Найдено {len(all_results)} уникальных результатов")
+            
+            # Извлечение фрагментов и файлов из метаданных
+            top_chunks = []
+            top_files = []
+            
+            for x in all_results:
+                if hasattr(x, 'page_content') and x.page_content.strip():
+                    top_chunks.append(x.page_content)
+                elif hasattr(x, 'metadata') and 'chunk' in x.metadata:
+                    chunk_content = x.metadata.get('chunk')
+                    if chunk_content and chunk_content.strip():
+                        top_chunks.append(chunk_content)
+                    
+                if hasattr(x, 'metadata') and x.metadata:
+                    if 'source' in x.metadata and x.metadata.get('source'):
+                        top_files.append(x.metadata.get('source'))
+                    elif 'file' in x.metadata and x.metadata.get('file'):
+                        top_files.append(x.metadata.get('file'))
+            
+            # Удаляем дубликаты из списка файлов
+            top_files = list(set(top_files))
+            
+            # Фильтруем слишком короткие чанки
+            top_chunks = [chunk for chunk in top_chunks if len(chunk.strip()) > 50]
+            
+            print(f"Отфильтровано {len(top_chunks)} содержательных фрагментов из {len(top_files)} файлов")
+            
+            result = [top_chunks, top_files]
+        except Exception as e:
+            import traceback
+            print(f"Ошибка в vec_search: {e}")
+            print(traceback.format_exc())
+            error = e
+    
+    # Запускаем поиск в отдельном потоке с таймаутом
+    search_thread = threading.Thread(target=search_task)
+    search_thread.daemon = True
+    search_thread.start()
+    search_thread.join(timeout)
+    
+    if search_thread.is_alive():
+        # Если поток все еще выполняется после таймаута
+        print(f"Превышен таймаут ({timeout} сек) при выполнении векторного поиска")
+        return [], []
+    
+    if error:
+        print(f"Произошла ошибка при векторном поиске: {error}")
+        return [], []
+    
+    if not result:
+        print("Векторный поиск не вернул результатов")
+        return [], []
+    
+    print(f"Улучшенный векторный поиск успешно завершен за {time.time() - start_time:.2f} секунд")
+    return result[0], result[1]
 
 def load_documents_into_database(model_name: str, documents_path: str, department_id: str, reload: bool = True) -> Chroma:
     """
@@ -57,6 +176,10 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     # Определяем директорию для хранения данных в зависимости от отдела
     department_directory = f"{PERSIST_DIRECTORY}/{department_id}"
 
+    # Создаем директорию для хранения данных, если она не существует
+    os.makedirs(PERSIST_DIRECTORY, exist_ok=True)
+    os.makedirs(department_directory, exist_ok=True)
+
     # Проверяем существует ли директория для хранения данных
     if os.path.exists(department_directory) and not reload:
         print(f"Загрузка существующей базы данных Chroma для отдела {department_id}...")
@@ -68,7 +191,42 @@ def load_documents_into_database(model_name: str, documents_path: str, departmen
     
     # Если нужно перезагрузить документы или директория не существует
     print(f"Загрузка документов для отдела {department_id}...")
-    raw_documents = load_documents(documents_path)
+    
+    # Если documents_path не начинается с /app/files/, добавляем этот префикс
+    if not documents_path.startswith('/app/files/'):
+        documents_path = f"/app/files/{documents_path}"
+    
+    # Проверяем существование пути к документам
+    if not os.path.exists(documents_path):
+        print(f"Путь к документам не существует: {documents_path}")
+        print(f"Текущая директория: {os.getcwd()}")
+        print(f"Содержимое директории /app/files/: {os.listdir('/app/files/') if os.path.exists('/app/files/') else 'директория не существует'}")
+        
+        # Создаем директорию, если она не существует
+        try:
+            os.makedirs(documents_path, exist_ok=True)
+            print(f"Создана директория: {documents_path}")
+            
+            # Если директория пуста, создаем пустой файл README.md
+            readme_path = os.path.join(documents_path, "README.md")
+            if not os.listdir(documents_path):
+                with open(readme_path, 'w') as f:
+                    f.write("# Директория для документов\n\nЭта директория создана для хранения документов для RAG.")
+                print(f"Создан файл README.md в {documents_path}")
+        except Exception as e:
+            print(f"Ошибка при создании директории: {e}")
+            raise FileNotFoundError(f"Не удалось создать директорию: {documents_path}. Ошибка: {e}")
+    
+    try:
+        raw_documents = load_documents(documents_path)
+    except Exception as e:
+        print(f"Ошибка при загрузке документов: {e}")
+        # Если нет документов, создаем пустую базу
+        return Chroma.from_documents(
+            documents=[],
+            embedding=OllamaEmbeddings(model=model_name, base_url=OLLAMA_HOST),
+            persist_directory=department_directory
+        )
     
     # Если директория для хранения существует, получаем список уже загруженных файлов
     loaded_files = set()
@@ -162,6 +320,12 @@ def load_documents(path: str) -> List[Document]:
     if not os.path.exists(path):
         raise FileNotFoundError(f"The specified path does not exist: {path}")
 
+    # Проверяем, есть ли файлы в директории
+    files = os.listdir(path)
+    if not files:
+        print(f"Директория {path} пуста")
+        return []
+
     loaders = {
         ".pdf": DirectoryLoader(
             path,
@@ -177,28 +341,16 @@ def load_documents(path: str) -> List[Document]:
             show_progress=True,
         ),
     }
-# 
+
     docs = []
     for file_type, loader in loaders.items():
         print(f"Loading {file_type} files")
-        docs.extend(loader.load())
+        try:
+            docs.extend(loader.load())
+        except Exception as e:
+            print(f"Ошибка при загрузке файлов типа {file_type}: {e}")
+    
     return docs
-
-def vec_search(embedding_model, query, db, n_top_cos: int = 5):
-    """
-    Выполняет поиск в векторной базе Chroma: кодирует запрос и возвращает топ-фрагменты и файлы.
-    """
-    # Кодируем запрос в вектор
-    query_emb = embedding_model.embed_documents([query])[0]
-
-    # Поиск в базе данных
-    search_result = db.similarity_search_by_vector(query_emb, k=n_top_cos)
-
-    # Извлечение фрагментов и файлов из метаданных
-    top_chunks = [x.metadata.get('chunk') for x in search_result]
-    top_files = list({x.metadata.get('file') for x in search_result if x.metadata.get('file')})
-
-    return top_chunks, top_files
 
 def rerank_results(query: str, results: List[Document], top_k: int = 5) -> List[Tuple[Document, float]]:
     """

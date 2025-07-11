@@ -8,6 +8,9 @@
       <li class="nav-item" role="presentation">
         <button class="nav-link" id="create-dir-tab" data-bs-toggle="pill" data-bs-target="#create-dir" type="button" role="tab" aria-controls="create-dir" aria-selected="false">Создание директории</button>
       </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="upload-files-tab" data-bs-toggle="pill" data-bs-target="#upload-files" type="button" role="tab" aria-controls="upload-files" aria-selected="false">Файлы для чат-бота</button>
+      </li>
     </ul>
     
     <!-- Содержимое подвкладок -->
@@ -78,8 +81,57 @@
           </div>
         </form>
       </div>
+      
+      <!-- Вкладка загрузки файлов для чат-бота -->
+      <div class="tab-pane fade" id="upload-files" role="tabpanel" aria-labelledby="upload-files-tab">
+        <form @submit.prevent="uploadFiles">
+          <div class="row">
+            <div class="col-12 mb-3">
+              <label for="upload-directory" class="form-label">Директория для загрузки</label>
+              <input type="text" class="form-control" id="upload-directory" v-model="uploadForm.directory" placeholder="Например: Research/Documents">
+              <small class="text-muted">Укажите директорию, в которую будут загружены файлы (относительно /app/files/)</small>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label for="access-level" class="form-label">Уровень доступа</label>
+              <input type="number" class="form-control" id="access-level" v-model="uploadForm.accessLevel" required min="1" placeholder="Например: 1">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label for="upload-department-id" class="form-label">Идентификатор отдела</label>
+              <input type="number" class="form-control" id="upload-department-id" v-model="uploadForm.departmentId" required min="1" placeholder="Например: 1">
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-12 mb-3">
+              <label for="upload-files" class="form-label">Файлы для загрузки</label>
+              <input type="file" class="form-control" id="upload-files" ref="fileInput" multiple @change="handleFileChange">
+              <small class="text-muted">Выберите один или несколько файлов для загрузки</small>
+            </div>
+          </div>
+          <div class="row mb-3" v-if="selectedFiles.length > 0">
+            <div class="col-12">
+              <p>Выбрано файлов: {{ selectedFiles.length }}</p>
+              <ul class="list-group">
+                <li class="list-group-item" v-for="(file, index) in selectedFiles" :key="index">
+                  {{ file.name }} ({{ formatFileSize(file.size) }})
+                </li>
+              </ul>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-info" :disabled="isUploading || selectedFiles.length === 0">
+            <span v-if="isUploading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            {{ isUploading ? 'Загрузка...' : 'Загрузить файлы' }}
+          </button>
+          <div v-if="uploadMessage" :class="['alert', uploadStatus ? 'alert-success' : 'alert-danger', 'mt-3']">
+            {{ uploadMessage }}
+          </div>
+        </form>
+      </div>
     </div>
   </div>
+
+  
 </template>
 
 <script>
@@ -108,7 +160,18 @@ export default {
       },
       directoryMessage: '',
       directoryStatus: false,
-      isCreatingDirectory: false
+      isCreatingDirectory: false,
+      
+      // Данные для загрузки файлов
+      uploadForm: {
+        directory: '',
+        accessLevel: 1,
+        departmentId: 1
+      },
+      selectedFiles: [],
+      uploadMessage: '',
+      uploadStatus: false,
+      isUploading: false
     };
   },
   methods: {
@@ -190,6 +253,90 @@ export default {
         console.error('Ошибка создания директории:', error);
       } finally {
         this.isCreatingDirectory = false;
+      }
+    },
+    
+    // Метод для обработки выбора файлов
+    handleFileChange(event) {
+      this.selectedFiles = Array.from(event.target.files);
+    },
+    
+    // Метод для форматирования размера файла
+    formatFileSize(bytes) {
+      if (bytes === 0) return '0 Байт';
+      
+      const k = 1024;
+      const sizes = ['Байт', 'КБ', 'МБ', 'ГБ'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    },
+    
+    // Метод для загрузки файлов
+    async uploadFiles() {
+      if (this.selectedFiles.length === 0) {
+        this.uploadMessage = 'Пожалуйста, выберите файлы для загрузки';
+        this.uploadStatus = false;
+        return;
+      }
+      
+      this.isUploading = true;
+      this.uploadMessage = 'Загрузка файлов...';
+      this.uploadStatus = true;
+      
+      try {
+        const formData = new FormData();
+        
+        // Добавляем все выбранные файлы в FormData
+        this.selectedFiles.forEach(file => {
+          formData.append('files', file);
+        });
+        
+        // Добавляем параметры как строковые значения
+        const directory = this.uploadForm.directory.trim();
+        
+        // Формируем URL с query-параметрами вместо добавления их в FormData
+        let url = `${import.meta.env.VITE_API_URL}/content/upload-files`;
+        const params = new URLSearchParams();
+        
+        if (directory) {
+          params.append('directory', directory);
+        }
+        params.append('access_level', this.uploadForm.accessLevel.toString());
+        params.append('department_id', this.uploadForm.departmentId.toString());
+        
+        // Добавляем параметры к URL
+        if (params.toString()) {
+          url += '?' + params.toString();
+        }
+        
+        console.log('Отправка запроса на URL:', url);
+        
+        // Отправляем запрос на сервер
+        const response = await axios.post(
+          url,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          }
+        );
+        
+        this.uploadMessage = `Файлы успешно загружены! (${this.selectedFiles.length} файл(ов))`;
+        this.uploadStatus = true;
+        
+        // Очищаем форму после успешной загрузки
+        this.selectedFiles = [];
+        if (this.$refs.fileInput) {
+          this.$refs.fileInput.value = '';
+        }
+      } catch (error) {
+        this.uploadMessage = 'Ошибка загрузки файлов: ' + (error.response?.data?.detail || error.message);
+        this.uploadStatus = false;
+        console.error('Ошибка загрузки файлов:', error);
+      } finally {
+        this.isUploading = false;
       }
     }
   },

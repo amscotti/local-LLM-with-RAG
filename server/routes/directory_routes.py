@@ -16,12 +16,19 @@ async def create_directory(directory_path: str):
         dict: Сообщение об успешном создании директории.
     """
     try:
-        # Проверяем, существует ли директория
-        if not os.path.exists(directory_path):
-            os.makedirs(directory_path)  # Создаем директорию
-            return {"message": f"Директория '{directory_path}' успешно создана."}
+        # Проверяем, начинается ли путь с /app/files/
+        if not directory_path.startswith('/app/files/'):
+            # Если нет, добавляем префикс
+            full_path = f"/app/files/{directory_path}"
         else:
-            raise HTTPException(status_code=400, detail=f"Директория '{directory_path}' уже существует.")
+            full_path = directory_path
+            
+        # Проверяем, существует ли директория
+        if not os.path.exists(full_path):
+            os.makedirs(full_path)  # Создаем директорию
+            return {"message": f"Директория '{full_path}' успешно создана."}
+        else:
+            return {"message": f"Директория '{full_path}' уже существует."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -37,11 +44,63 @@ async def delete_directory(directory_path: str):
         dict: Сообщение об успешном удалении директории.
     """
     try:
-        # Проверяем, существует ли директория
-        if os.path.exists(directory_path):
-            shutil.rmtree(directory_path)  # Удаляем директорию и её содержимое
-            return {"message": f"Директория '{directory_path}' успешно удалена."}
+        # Проверяем, начинается ли путь с /app/files/
+        if not directory_path.startswith('/app/files/'):
+            # Если нет, добавляем префикс
+            full_path = f"/app/files/{directory_path}"
         else:
-            raise HTTPException(status_code=404, detail=f"Директория '{directory_path}' не найдена.")
+            full_path = directory_path
+            
+        # Проверяем, существует ли директория
+        if os.path.exists(full_path):
+            shutil.rmtree(full_path)  # Удаляем директорию и её содержимое
+            return {"message": f"Директория '{full_path}' успешно удалена."}
+        else:
+            raise HTTPException(status_code=404, detail=f"Директория '{full_path}' не найдена.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/list")
+async def list_directory(directory_path: str = "/app/files"):
+    """
+    Возвращает список файлов и директорий по указанному пути.
+    
+    Args:
+        directory_path (str): Путь к директории, содержимое которой нужно получить.
+    
+    Returns:
+        dict: Список файлов и директорий.
+    """
+    try:
+        # Проверяем, начинается ли путь с /app/files/
+        if not directory_path.startswith('/app/files'):
+            # Если нет, добавляем префикс
+            full_path = f"/app/files/{directory_path}"
+        else:
+            full_path = directory_path
+            
+        # Проверяем, существует ли директория
+        if not os.path.exists(full_path):
+            raise HTTPException(status_code=404, detail=f"Директория '{full_path}' не найдена.")
+            
+        # Получаем список файлов и директорий
+        items = os.listdir(full_path)
+        
+        # Разделяем на файлы и директории
+        directories = []
+        files = []
+        
+        for item in items:
+            item_path = os.path.join(full_path, item)
+            if os.path.isdir(item_path):
+                directories.append(item)
+            else:
+                files.append(item)
+                
+        return {
+            "path": full_path,
+            "directories": directories,
+            "files": files
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
