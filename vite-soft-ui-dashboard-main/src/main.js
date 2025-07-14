@@ -17,8 +17,10 @@ import store from "./store";
 import router from "./router";
 import "./assets/css/nucleo-icons.css";
 import "./assets/css/nucleo-svg.css";
-import "./assets/css/custom.css";
 import SoftUIDashboard from "./soft-ui-dashboard";
+
+// Подключаем ваш custom.css ПОСЛЕ SoftUIDashboard для большего приоритета
+import "./assets/css/custom.css";
 import axios from 'axios';
 import axiosInstance from './utils/axiosConfig';
 import { setupGlobalErrorHandlers } from './utils/errorLogger';
