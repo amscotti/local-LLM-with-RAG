@@ -31,10 +31,10 @@
                 <p class="text-xs text-secondary mb-0">{{ content.description }}</p>
               </td>
               <td class="align-middle text-center text-sm">
-                <p class="text-xs font-weight-bold mb-0">{{ content.department_id }}</p>
+                <p class="text-xs font-weight-bold mb-0">{{ departments[content.department_id] || 'Неизвестный отдел' }}</p>
               </td>
               <td class="align-middle text-center">
-                <span class="text-secondary text-xs font-weight-bold">{{ content.access_level }}</span>
+                <span class="text-secondary text-xs font-weight-bold">{{ accessLevels[content.access_level] || 'Неизвестный уровень' }}</span>
               </td>
               <td v-if="isAdmin" class="align-middle text-center">
                 <span 
@@ -84,7 +84,19 @@ export default {
   data() {
     return {
       contents: [],
-      isAdmin: false
+      isAdmin: false,
+      departments: {
+        1: "Клиенты",
+        2: "Сервисная служба",
+        3: "Отдел Продаж",
+        4: "Отдел Методик",
+        5: "Админ",
+      },
+      accessLevels: {
+        1: "Базовый",
+        2: "Повышенный",
+        3: "Админ",
+      }
     };
   },
   async created() {
