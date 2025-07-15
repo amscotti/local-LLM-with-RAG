@@ -102,14 +102,21 @@ export default {
   },
   methods: {
     async handleLogin() {
+      // Проверка на пустые поля
       if (!this.login || !this.password) {
         this.errorMessage = "Пожалуйста, заполните все поля";
         return;
       }
+
+      // Проверка на кириллицу в логине
+      const cyrillicRegex = /[а-яА-ЯЁё]/;
+      if (cyrillicRegex.test(this.login)) {
+        this.errorMessage = "Логин не должен содержать кириллические символы";
+        return;
+      }
+
       try {
         this.errorMessage = "";
-        console.log("Логин перед отправкой:", this.login);
-        console.log("Пароль перед отправкой:", this.password);
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/login`, {
           login: this.login,
           password: this.password
@@ -118,21 +125,19 @@ export default {
             'Content-Type': 'application/json'
           }
         });
-        
-        console.log("Успешная авторизация:", response.data);
-        
+
         // Сохраняем информацию о входе пользователя
         localStorage.setItem("isAuthenticated", "true");
         localStorage.setItem("userLogin", this.login);
         localStorage.setItem("userId", response.data.id);
         localStorage.setItem("departmentId", response.data.department_id);
         localStorage.setItem("role_id", response.data.role_id);
-        
+
         // Перенаправляем на панель управления
         this.router.push("/dashboard");
       } catch (error) {
         console.error("Ошибка авторизации:", error);
-        this.errorMessage = error.response?.data?.detail || "Произошла ошибка при авторизации";
+        this.errorMessage = error.response?.data?.detail || "Неверный логин или пароль";
       }
     }
   },

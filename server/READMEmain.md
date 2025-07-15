@@ -183,3 +183,8 @@ Thank you very much to [amscotti](https://github.com/amscotti) whose repository 
     }
   ]
 }
+
+
+
+
+mysqldump -h [ip] -P [port] -u [user_name] -p [db_name] > [file_name.sql]

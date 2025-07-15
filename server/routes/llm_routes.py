@@ -297,8 +297,10 @@ async def debug_reinitialize_department(department_id: str):
     try:
         print(f"DEBUG: Принудительная переинициализация отдела {department_id}")
         
-        # Используем стандартные параметры для отдела 5
-        if department_id == "5":
+   
+
+        # Инициализация для отделов 1-5
+        if department_id in ["1", "2", "3", "4", "5"]:
             success = llm_state_manager.initialize_llm(
                 "gemma3",
                 "nomic-embed-text", 
@@ -307,7 +309,7 @@ async def debug_reinitialize_department(department_id: str):
                 reload=True
             )
         else:
-            return {"error": f"Неизвестный отдел {department_id}. Поддерживается только отдел 5."}
+            return {"error": f"Неизвестный отдел {department_id}. Поддерживаются только отделы 1-5."}
         
         if success:
             return {
@@ -389,7 +391,7 @@ async def query(request: QueryRequest, background_tasks: BackgroundTasks):
             total_components = len(sync_chats) + len(async_chats) + len(databases) + len(embeddings)
             
         # Если все словари пусты И это отдел 5, пытаемся автоматически восстановить
-        if total_components == 0 and department_id == "5":
+        if total_components == 0 and department_id in ["5" , "1" , "2" , "3" , "4"]:
             print(f"WARNING: Обнаружена полная потеря состояния! Пытаемся автоматически восстановить отдел {department_id}")
             try:
                 auto_restore_success = llm_state_manager.initialize_llm(

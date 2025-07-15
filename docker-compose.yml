@@ -55,18 +55,18 @@ services:
     networks:
       - app-network
 
-  backup:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123123}
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./backup:/backup
-    depends_on:
-      - db
-    command: ["sh", "-c", "mysqldump -h db -u root -p${MYSQL_ROOT_PASSWORD:-123123} ${MYSQL_DATABASE:-db} > /backup/backup_file.sql"]
-    networks:
-      - app-network
+  # backup:
+  #   image: mysql:8.0
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123123}
+  #   volumes:
+  #     - db_data:/var/lib/mysql
+  #     - ./backup:/backup
+  #   depends_on:
+  #     - db
+  #   command: ["sh", "-c", "mysqldump -h db -u root -p${MYSQL_ROOT_PASSWORD:-123123} ${MYSQL_DATABASE:-db} > /backup/backup_file.sql"]
+  #   networks:
+  #     - app-network
 
   nginx:
     image: nginx:latest

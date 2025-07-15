@@ -1,5 +1,300 @@
-.btn{    
-    background-color: #3c6498;
-    border-color: #3c6498;
-    
+/* Единые цвета для всего приложения */
+:root {
+  --primary-color: rgb(60, 100, 152);      /* Основной синий */
+  --secondary-color: rgb(123, 123, 123);   /* Серый */
+  --accent-color: rgb(23, 67, 118);        /* Темный синий */
+  
+  /* Hex эквиваленты для совместимости */
+  --primary-hex: #3c6498;
+  --secondary-hex: #7b7b7b;
+  --accent-hex: #174376;
+}
+
+/* КНОПКИ */
+.btn {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.btn:hover {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(60, 100, 152, 0.3);
+}
+
+.btn:focus,
+.btn.focus {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+  box-shadow: 0 0 0 0.2rem rgba(60, 100, 152, 0.25);
+}
+
+.btn:active,
+.btn.active {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+/* Вторичные кнопки */
+.btn-secondary {
+  background-color: var(--secondary-color);
+  border-color: var(--secondary-color);
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}
+
+.btn-secondary:focus,
+.btn-secondary.focus {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 0.2rem rgba(123, 123, 123, 0.25);
+}
+
+/* Контурные кнопки */
+.btn-outline-primary {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+  background-color: transparent;
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.btn-outline-primary:focus {
+  box-shadow: 0 0 0 0.2rem rgba(60, 100, 152, 0.25);
+}
+
+/* ССЫЛКИ */
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+
+a:focus {
+  color: var(--accent-color);
+  outline: 2px solid rgba(60, 100, 152, 0.5);
+  outline-offset: 2px;
+}
+
+/* ФОРМЫ */
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(60, 100, 152, 0.25);
+}
+
+.form-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 0.2rem rgba(60, 100, 152, 0.25);
+}
+
+.form-check-input:checked {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.form-check-input:focus {
+  box-shadow: 0 0 0 0.25rem rgba(60, 100, 152, 0.25);
+}
+
+/* НАВИГАЦИЯ */
+.nav-link {
+  color: var(--secondary-color);
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: var(--primary-color);
+}
+
+.nav-link:focus {
+  color: var(--primary-color);
+}
+
+.nav-link.active {
+  color: var(--accent-color);
+}
+
+/* ТАБЛИЦЫ */
+.table tbody tr:hover {
+  background-color: rgba(60, 100, 152, 0.1);
+}
+
+.table th {
+  border-top: 1px solid var(--secondary-color);
+}
+
+/* BADGE/БЕЙДЖИ */
+.badge {
+  background-color: var(--primary-color);
+}
+
+.badge:hover {
+  background-color: var(--accent-color);
+}
+
+/* КАРТОЧКИ */
+.card:hover {
+  box-shadow: 0 4px 12px rgba(60, 100, 152, 0.15);
+  transition: box-shadow 0.3s ease;
+}
+
+/* DROPDOWN */
+.dropdown-item:hover {
+  background-color: rgba(60, 100, 152, 0.1);
+  color: var(--accent-color);
+}
+
+.dropdown-item:focus {
+  background-color: rgba(60, 100, 152, 0.1);
+  color: var(--accent-color);
+}
+
+/* PAGINATION */
+.page-link {
+  color: var(--primary-color);
+  border-color: var(--secondary-color);
+}
+
+.page-link:hover {
+  color: var(--accent-color);
+  background-color: rgba(60, 100, 152, 0.1);
+  border-color: var(--primary-color);
+}
+
+.page-link:focus {
+  box-shadow: 0 0 0 0.2rem rgba(60, 100, 152, 0.25);
+}
+
+.page-item.active .page-link {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* MODAL */
+.modal-header {
+  border-bottom: 1px solid var(--secondary-color);
+}
+
+.modal-footer {
+  border-top: 1px solid var(--secondary-color);
+}
+
+/* ALERT */
+.alert-primary {
+  background-color: rgba(60, 100, 152, 0.1);
+  border-color: var(--primary-color);
+  color: var(--accent-color);
+}
+
+/* PROGRESS */
+.progress-bar {
+  background-color: var(--primary-color);
+}
+
+/* СПЕЦИАЛЬНЫЕ КЛАССЫ ДЛЯ КОМПОНЕНТОВ */
+.text-primary {
+  color: var(--primary-color) !important;
+}
+
+.text-secondary {
+  color: var(--secondary-color) !important;
+}
+
+.text-accent {
+  color: var(--accent-color) !important;
+}
+
+.bg-primary {
+  background-color: var(--primary-color) !important;
+}
+
+.bg-secondary {
+  background-color: var(--secondary-color) !important;
+}
+
+.bg-accent {
+  background-color: var(--accent-color) !important;
+}
+
+/* BORDER COLORS */
+.border-primary {
+  border-color: var(--primary-color) !important;
+}
+
+.border-secondary {
+  border-color: var(--secondary-color) !important;
+}
+
+.border-accent {
+  border-color: var(--accent-color) !important;
+}
+
+/* HOVER ЭФФЕКТЫ ДЛЯ КАСТОМНЫХ ЭЛЕМЕНТОВ */
+.hover-primary:hover {
+  color: var(--primary-color) !important;
+}
+
+.hover-accent:hover {
+  color: var(--accent-color) !important;
+}
+
+.hover-bg-primary:hover {
+  background-color: var(--primary-color) !important;
+}
+
+.hover-bg-accent:hover {
+  background-color: var(--accent-color) !important;
+}
+
+/* FOCUS ЭФФЕКТЫ */
+.focus-primary:focus {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+}
+
+.focus-accent:focus {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* АНИМАЦИИ */
+.transition-colors {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.transition-shadow {
+  transition: box-shadow 0.3s ease;
+}
+
+.transition-transform {
+  transition: transform 0.3s ease;
+}
+
+/* SHADOW COLORS */
+.shadow-primary {
+  box-shadow: 0 4px 8px rgba(60, 100, 152, 0.3);
+}
+
+.shadow-accent {
+  box-shadow: 0 4px 8px rgba(23, 67, 118, 0.3);
 }
