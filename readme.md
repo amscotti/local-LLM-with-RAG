@@ -4,11 +4,7 @@
     <img src="images/wizard_experimenting.jpg" alt="A wizard experimenting - Leonardo AI" width="600">
 </p>
 
-This project is an experimental sandbox for testing out ideas related to running local Large Language Models (LLMs) with [Ollama](https://ollama.ai/) to perform Retrieval-Augmented Generation (RAG) for answering questions based on sample PDFs. In this project, we are also using Ollama to create embeddings with the [nomic-embed-text](https://ollama.com/library/nomic-embed-text) to use with [Chroma](https://docs.trychroma.com/). Please note that the embeddings are reloaded each time the application runs, which is not efficient and is only done here for testing purposes.
-
-[![asciicast](https://asciinema.org/a/fepTvXf1UiDpRUhhNiswL8isu.svg)](https://asciinema.org/a/fepTvXf1UiDpRUhhNiswL8isu)
-
-There is also a web UI created using [Streamlit](https://streamlit.io/) to provide a different way to interact with Ollama.
+This project is an experimental sandbox for testing out ideas related to running local Large Language Models (LLMs) with [Ollama](https://ollama.ai/) and [Pydantic AI](https://ai.pydantic.dev/) to perform **agentic** Retrieval-Augmented Generation (RAG) for answering questions based on your documents. The agent can decide when and how to search documents, unlike fixed RAG pipelines. We use Ollama to create embeddings with [nomic-embed-text](https://ollama.com/library/nomic-embed-text) stored in [LanceDB](https://lancedb.com/) for vector search.
 
 <p align="center">
     <img src="images/streamlit_ui.png" alt="Screenshot of Streamlit web UI" width="600">
@@ -16,34 +12,58 @@ There is also a web UI created using [Streamlit](https://streamlit.io/) to provi
 
 ## Requirements
 
-- [Ollama](https://ollama.ai/) verson 0.5.7 or higher.
+- [Ollama](https://ollama.ai/) version 0.13.5 or higher.
 
 ## Setup
 
 1. Clone this repository to your local machine.
 2. Install UV using instructions from the Astral site, [Installation](https://docs.astral.sh/uv/#installation)
-3. Create a virtual environment and install the required Python packages by running `uv sync`
+3. Create a virtual environment and install required Python packages by running `uv sync`
 
-## Running the Project
+## Running the Application
 
-**Note:** The first time you run the project, it will download the necessary models from Ollama for the LLM and embeddings. This is a one-time setup process and may take some time depending on your internet connection.
+Run the Streamlit application:
 
-1. Run the main script with `uv app.py -m <model_name> -p <path_to_documents>` to specify a model and the path to documents. If no model is specified, it defaults to [mistral](https://ollama.com/library/mistral). If no path is specified, it defaults to `Research` located in the repository for example purposes.
-2. Optionally, you can specify the embedding model to use with `-e <embedding_model_name>`. If not specified, it defaults to [nomic-embed-text](https://ollama.com/library/nomic-embed-text).
+```bash
+uv run streamlit run interfaces/streamlit_app.py
+```
 
-This will load the PDFs and Markdown files, generate embeddings, query the collection, and answer the question defined in `app.py`.
+This will start a local web server and open a new tab in your default web browser. The UI allows you to select models, specify a document folder, and chat with your documents.
 
-## Running the Streamlit UI
+**Note:** The first time you run the project, it will download the necessary models from Ollama for the LLM and embeddings. This may take some time depending on your internet connection.
 
-Run the Streamlit application by executing `uv streamlit run ui.py` in your terminal.
+### Model Requirements
 
-This will start a local web server and open a new tab in your default web browser where you can interact with the application. The Streamlit UI allows you to select models, select a folder, providing an easier and more intuitive way to interact with the RAG chatbot system compared to the command-line interface. The application will handle the loading of documents, generating embeddings, querying the collection, and displaying the results interactively.
+**Important:** The selected LLM must support **tool calling** (function calling). The application uses an agentic approach where the model decides when to search documents, which requires tool calling capability. Models without this feature will not work correctly—they may fail silently, output raw tool syntax, or ignore documents entirely.
+
+Not all Ollama models support tool calling reliably. We tested several model families and sizes to find the best options for this RAG application.
+
+**Recommended Models (Tested):**
+- **qwen3:14b** - Best overall quality, excellent reasoning and document synthesis
+- **qwen3:8b** - Best balance of speed and quality, minimum recommended size for reliable RAG
+
+These Qwen3 models were tested extensively with compound questions requiring multiple document searches. Both handle tool calling reliably and produce accurate, well-formatted answers.
+
+**Why Model Size Matters:**
+
+Smaller models (under 8B parameters) struggle with agentic RAG tasks:
+- They may fail to call the search tool when needed
+- They often hallucinate instead of searching documents
+- Some output raw tool syntax instead of executing searches
+
+Our testing showed qwen3:8b as the minimum viable size. Smaller models like qwen3:4b and qwen3:1.7b had significant reliability issues with tool calling.
+
+### Supported Document Formats
+
+The application uses [MarkItDown](https://github.com/microsoft/markitdown) to load documents:
+- PDF, Word (.docx), PowerPoint (.pptx), Excel (.xlsx)
+- Markdown (.md), HTML, CSV, JSON
 
 ## Technologies Used
 
-- [Langchain](https://github.com/langchain/langchain): A Python library for working with Large Language Model
-- [Ollama](https://ollama.ai/): A platform for running Large Language models locally.
-- [Chroma](https://docs.trychroma.com/): A vector database for storing and retrieving embeddings.
-- [PyPDF](https://pypi.org/project/PyPDF2/): A Python library for reading and manipulating PDF files.
-- [Streamlit](https://streamlit.io/): A web framework for creating interactive applications for machine learning and data science projects.
-- [UV](https://astral.sh/uv): A fast and efficient Python package installer and resolver.
+- [Pydantic AI](https://ai.pydantic.dev/): Type-safe agent framework with tool calling
+- [Ollama](https://ollama.ai/): Platform for running Large Language Models locally
+- [LanceDB](https://lancedb.com/): Vector database for storing and retrieving embeddings
+- [MarkItDown](https://github.com/microsoft/markitdown): Microsoft's document converter for PDF, Office files, and more
+- [Streamlit](https://streamlit.io/): Web framework for interactive applications
+- [UV](https://astral.sh/uv): Fast Python package installer and resolver

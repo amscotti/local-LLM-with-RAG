@@ -1,5 +1,9 @@
+import logging
+
 import ollama
 from tqdm import tqdm
+
+logger = logging.getLogger(__name__)
 
 
 def __pull_model(name: str) -> None:
@@ -10,7 +14,7 @@ def __pull_model(name: str) -> None:
             bars[current_digest].close()
 
         if not digest:
-            print(progress.get("status"))
+            logger.info(progress.get("status"))
             continue
 
         if digest not in bars and (total := progress.get("total")):
@@ -34,34 +38,50 @@ def __is_model_available_locally(model_name: str) -> bool:
 
 def get_list_of_models() -> list[str]:
     """
-    Retrieves a list of available models from the Ollama repository.
+    Retrieves a list of models that support tool calling.
+
+    Filters out models without tool support (e.g., embedding models,
+    models that don't support function calling).
 
     Returns:
-        list[str]: A list of model names available in the Ollama repository.
+        list[str]: A list of model names that support tool calling.
     """
-    return [model["model"] for model in ollama.list()["models"]]
+    models = []
+    for model in ollama.list()["models"]:
+        try:
+            info = ollama.show(model.model)
+            capabilities = getattr(info, "capabilities", None) or []
+            if "tools" in capabilities:
+                models.append(model.model)
+        except Exception:
+            # Skip models we can't inspect
+            continue
+    return models
 
 
 def check_if_model_is_available(model_name: str) -> None:
     """
     Ensures that the specified model is available locally.
-    If the model is not available, it attempts to pull it from the Ollama repository.
+
+    If the model is not available, it attempts to pull it from the Ollama
+    repository.
 
     Args:
         model_name (str): The name of the model to check.
 
     Raises:
-        ollama.ResponseError: If there is an issue with pulling the model from the repository.
+        Exception: If there is an issue with pulling the model.
     """
     try:
         available = __is_model_available_locally(model_name)
-    except Exception:
-        raise Exception("Unable to communicate with the Ollama service")
+    except Exception as e:
+        raise Exception("Unable to communicate with the Ollama service") from e
 
     if not available:
         try:
             __pull_model(model_name)
-        except Exception:
+        except Exception as e:
             raise Exception(
-                f"Unable to find model '{model_name}', please check the name and try again."
-            )
+                f"Unable to find model '{model_name}', "
+                "please check the name and try again."
+            ) from e
