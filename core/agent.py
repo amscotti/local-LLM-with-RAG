@@ -6,6 +6,8 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.messages import ModelMessage
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
+from pydantic_ai.settings import ModelSettings
+from pydantic_ai.usage import UsageLimits
 
 from core.document_loader import (
     get_db_connection,
@@ -76,38 +78,24 @@ class ResearchAgent:
             model,
             deps_type=AgentDeps,
             system_prompt=(
-                "You are a helpful research assistant who answers questions "
-                "based on provided research documents. "
-                "Use the search_documents tool to find relevant information.\n\n"
-                "CRITICAL: ALWAYS use the search_documents tool when "
-                "the user asks about:\n"
-                "- Specific facts, numbers, percentages, or metrics\n"
-                "- Details about methodologies, experiments, or results\n"
-                "- Information about specific systems, frameworks, or techniques\n"
-                "- ANY question that could be answered by the documents\n"
-                "DO NOT rely on conversation history or your own knowledge for "
-                "document-specific questions. When in doubt, SEARCH.\n\n"
-                "IMPORTANT: The search tool has NO knowledge of our conversation. "
-                "When formulating search queries:\n"
-                "- Use complete, self-contained queries\n"
-                "- Never use pronouns like 'this', 'it', or 'that'\n"
-                "- Include the full topic context from our conversation\n"
-                "- Use natural language phrases that might appear in documents\n"
-                "- Good: 'what evaluation metrics were used in the experiments'\n"
-                "- Good: 'how does the proposed architecture handle errors'\n"
-                "- Bad: 'examples of this' or 'tell me more'\n\n"
-                "QUERY STRATEGY for compound questions:\n"
-                "- For questions with multiple parts or concepts, break them into "
-                "SEPARATE searches\n"
-                "- You can and SHOULD search multiple times - don't try to answer "
-                "everything with one query\n"
-                "- If initial results don't fully answer the question, search again "
-                "with different terms\n"
-                "- Better to search 2-3 focused queries than one broad query\n"
-                "- Example: 'Compare X and Y' should trigger searches for X, then Y\n\n"
-                "If the search results are insufficient to answer the question, "
-                "state that you can't answer from the available documents. "
-                "Provide detailed answers with sources when possible."
+                "You are a helpful research assistant. "
+                "ALWAYS use the search_documents tool for any question that could be "
+                "answered from the documents (facts, numbers, methodologies, systems, "
+                "techniques). Never rely on your own knowledge.\n\n"
+                "Search guidelines:\n"
+                "- Use complete, self-contained queries (no pronouns).\n"
+                "- For compound questions, run multiple focused searches rather than "
+                "one broad query.\n"
+                "- After 2–3 searches you should usually have enough information to "
+                "answer. Do not keep searching indefinitely.\n\n"
+                "When you have sufficient information, give a clear final answer and "
+                "stop. If the documents do not contain the answer, say so explicitly. "
+                "Always cite sources using the exact format "
+                "[Source: ..., Page: ...].\n\n"
+                "Example of a good final answer:\n"
+                '"The paper describes three main components: memory stream, '
+                "reflection, and planning "
+                '[Source: Research/2304.03442v1.pdf, Page: 3]."'
             ),
         )
 
@@ -136,21 +124,31 @@ class ResearchAgent:
             results = ctx.deps.vector_store.search(query_embedding).limit(10).to_list()
 
             if not results:
-                return "No relevant documents found."
+                return "No relevant documents found for this query."
 
             result_parts = []
-            for doc in results:
+            for i, doc in enumerate(results, 1):
                 source = doc.get("source", "Unknown")
                 page = doc.get("page", "N/A")
                 text = doc.get("text", "")
-                result_parts.append(f"[Source: {source}, Page: {page}]")
-                result_parts.append(text)
+                result_parts.append(f"--- Result {i} ---")
+                result_parts.append(f"Source: {source}, Page: {page}")
+                result_parts.append(text.strip())
+            result_parts.append("--- End of results ---")
 
             return "\n\n".join(result_parts)
 
-    def get_chat_handler(self):
+    def get_chat_handler(
+        self,
+        model_settings: ModelSettings | None = None,
+        usage_limits: UsageLimits | None = None,
+    ):
         """
         Get a callable that handles chat interactions.
+
+        Args:
+            model_settings: Optional pydantic-ai model settings.
+            usage_limits: Optional tool-call / token limits.
 
         Returns:
             A function that takes a question and returns a response.
@@ -161,17 +159,34 @@ class ResearchAgent:
             deps = AgentDeps(
                 embedding_model=self.embedding_model, vector_store=self.vector_store
             )
-            result = self.agent.run_sync(question, deps=deps)
+            result = self.agent.run_sync(
+                question,
+                deps=deps,
+                model_settings=model_settings,
+                usage_limits=usage_limits,
+            )
             return result.output
 
         return chat
 
-    def get_streaming_chat_handler(self, include_tool_calls: bool = False):
+    def get_streaming_chat_handler(
+        self,
+        include_tool_calls: bool = False,
+        model_settings: ModelSettings | None = None,
+        usage_limits: UsageLimits | None = None,
+    ):
         """
         Get a generator that handles streaming chat interactions.
 
         Args:
             include_tool_calls: If True, yields tool call info as well as text.
+            model_settings: Optional pydantic-ai model settings forwarded to
+                ``run_stream_sync`` (e.g. ``{"extra_body": ...}`` to toggle a
+                provider-specific option like qwen3 thinking mode). ``None``
+                keeps the model's default behaviour.
+            usage_limits: Optional ``UsageLimits`` forwarded to
+                ``run_stream_sync``. Use ``UsageLimits(tool_calls_limit=N)`` to
+                bound the number of tool calls per run and prevent search loops.
 
         Returns:
             A function that takes a question, optional message_history,
@@ -188,7 +203,11 @@ class ResearchAgent:
             )
 
             response = self.agent.run_stream_sync(
-                question, deps=deps, message_history=message_history
+                question,
+                deps=deps,
+                message_history=message_history,
+                model_settings=model_settings,
+                usage_limits=usage_limits,
             )
             last_text = ""
             for text in response.stream_text():
@@ -212,7 +231,11 @@ class ResearchAgent:
             )
 
             response = self.agent.run_stream_sync(
-                question, deps=deps, message_history=message_history
+                question,
+                deps=deps,
+                message_history=message_history,
+                model_settings=model_settings,
+                usage_limits=usage_limits,
             )
 
             # Get only tool calls from current run (not previous history)

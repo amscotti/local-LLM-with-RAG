@@ -38,20 +38,24 @@ This will start a local web server and open a new tab in your default web browse
 
 Not all Ollama models support tool calling reliably. We tested several model families and sizes to find the best options for this RAG application.
 
-**Recommended Models (Tested):**
-- **qwen3:14b** - Best overall quality, excellent reasoning and document synthesis
-- **qwen3:8b** - Best balance of speed and quality, minimum recommended size for reliable RAG
+**Recommended Models (Benchmarked):**
+- **qwen3.5:9b** - Best overall: highest quality (4.3/5 avg on 14-question eval), ~40% faster than qwen3:8b, multimodal (vision), 256K context. Current default.
+- **qwen3:8b** - Strong alternative (4.4/5), slightly slower. Reliable tool calling.
+- **qwen3:14b** - Same quality tier as 8b/9b but ~50% slower. No quality advantage for this RAG task.
 
-These Qwen3 models were tested extensively with compound questions requiring multiple document searches. Both handle tool calling reliably and produce accurate, well-formatted answers.
+These models were benchmarked using an automated eval harness (`bench/`) with a 480B cloud model (qwen3-coder) as the LLM judge. All three handle tool calling reliably and produce accurate, well-formatted answers.
+
+**Not recommended for agentic RAG:**
+- **lfm2.5:8b-a1b** - Fast (26s/question) but unreliable: failed to call the search tool on 30% of questions. Only ~1B active parameters (despite the 8B label).
 
 **Why Model Size Matters:**
 
-Smaller models (under 8B parameters) struggle with agentic RAG tasks:
+Smaller models (under 8B parameters, or hybrid models with few active parameters) struggle with agentic RAG tasks:
 - They may fail to call the search tool when needed
 - They often hallucinate instead of searching documents
-- Some output raw tool syntax instead of executing searches
+- Some get stuck in search loops, calling the tool repeatedly without converging
 
-Our testing showed qwen3:8b as the minimum viable size. Smaller models like qwen3:4b and qwen3:1.7b had significant reliability issues with tool calling.
+The app includes safeguards (thinking-mode disabled, 4-search cap per question) to keep responses responsive and prevent runaway behavior.
 
 ### Supported Document Formats
 

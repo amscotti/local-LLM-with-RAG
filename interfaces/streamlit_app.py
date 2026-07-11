@@ -12,9 +12,19 @@ from pydantic_ai.messages import (
     TextPart,
     UserPromptPart,
 )
+from pydantic_ai.settings import ModelSettings
+from pydantic_ai.usage import UsageLimits
 
 from core.agent import create_research_agent
 from core.models import check_if_model_is_available, get_list_of_models
+
+# Disable qwen3-family thinking mode for responsive UI (avoids 8K+ token
+# runaway generation). Non-qwen models ignore this key.
+APP_MODEL_SETTINGS: ModelSettings = {
+    "extra_body": {"chat_template_kwargs": {"enable_thinking": False}}
+}
+# Prevent infinite search loops in the live UI.
+APP_USAGE_LIMITS = UsageLimits(tool_calls_limit=4)
 
 
 def convert_to_pydantic_messages(
@@ -36,7 +46,7 @@ def reset_conversation() -> None:
 
 
 EMBEDDING_MODEL = "nomic-embed-text"
-DEFAULT_MODEL = "qwen3:14b"
+DEFAULT_MODEL = "qwen3.5:9b"
 DEFAULT_FOLDER = "Research"
 
 if "list_of_models" not in st.session_state:
@@ -58,7 +68,9 @@ with st.sidebar:
 
     # Settings section - pre-select default model if available
     model_list = st.session_state["list_of_models"]
-    default_index = model_list.index(DEFAULT_MODEL) if DEFAULT_MODEL in model_list else 0
+    default_index = (
+        model_list.index(DEFAULT_MODEL) if DEFAULT_MODEL in model_list else 0
+    )
     selected_model = st.selectbox("Model:", model_list, index=default_index)
     folder_path = st.text_input("Documents folder:", DEFAULT_FOLDER)
 
@@ -170,7 +182,9 @@ if "agent" in st.session_state:
 
                 # Get streaming handler with tool call info
                 stream = st.session_state.agent.get_streaming_chat_handler(
-                    include_tool_calls=True
+                    include_tool_calls=True,
+                    model_settings=APP_MODEL_SETTINGS,
+                    usage_limits=APP_USAGE_LIMITS,
                 )(prompt, message_history=history)
 
                 response_placeholder = st.empty()

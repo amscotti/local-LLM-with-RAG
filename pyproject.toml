@@ -6,17 +6,19 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "ollama>=0.6.1",
-    "markitdown[all]>=0.1.0",
-    "pydantic-ai>=0.1.0",
-    "streamlit>=1.52.0",
+    "markitdown[all]>=0.1.4",
+    "pydantic-ai>=1.39.0",
+    "streamlit>=1.52.2",
     "lancedb>=0.26.0",
     "watchdog>=6.0.0",
+    "tqdm>=4.67.1",
 ]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.8.0",
-    "ty>=0.0.1a6",
+    "ruff>=0.14.10",
+    "pyrefly>=1.1.1",
+    "types-tqdm>=4.67.1",
 ]
 
 [tool.ruff]
@@ -30,8 +32,13 @@ ignore = []
 [tool.ruff.lint.isort]
 known-first-party = ["core", "interfaces"]
 
-[tool.ty.environment]
+[tool.pyrefly]
+project-includes = ["**/*.py"]
+project-excludes = [
+    ".venv",
+    "storage",
+    "__pycache__",
+    "**/__pycache__",
+]
 python-version = "3.13"
-
-[tool.ty.src]
-include = ["*.py", "core/*.py", "interfaces/*.py"]
+python-platform = "darwin"
